@@ -27,8 +27,8 @@
   },
   "maintainers": [
     {
-      "name": "DevKarya",
-      "url": "https://github.com/devkarya"
+      "name": "devpranali",
+      "url": "https://github.com/devpranali"
     }
   ],
   "license": "MIT",
@@ -38,11 +38,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/devkarya/react-skeletonify"
+    "url": "git+https://github.com/devpranali/react-skeletonify.git"
   },
-  "homepage": "https://github.com/devkarya/react-skeletonify#readme",
+  "homepage": "https://github.com/devpranali/react-skeletonify#readme",
   "bugs": {
-    "url": "https://github.com/devkarya/react-skeletonify/issues"
+    "url": "https://github.com/devpranali/react-skeletonify/issues"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
