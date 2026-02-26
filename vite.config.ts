@@ -12,8 +12,8 @@ export default defineConfig({
     build: {
         lib: {
             entry: 'src/index.tsx',
-            name: 'ReactSkeletonify',
-            fileName: (format) => `react-skeletonify.${format}.js`,
+            name: 'ReactSkeletonix',
+            fileName: (format) => `react-skeletonix.${format}.js`,
         },
         rollupOptions: {
             external: ['react', 'react-dom'],

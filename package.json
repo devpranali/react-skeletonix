@@ -1,9 +1,9 @@
 {
-  "name": "react-skeletonify",
+  "name": "react-skeletonix",
   "version": "1.0.0",
   "description": "A dynamic skeleton loader that automatically generates loading states from child components.",
-  "main": "./dist/react-skeletonify.umd.js",
-  "module": "./dist/react-skeletonify.es.js",
+  "main": "./dist/react-skeletonix.umd.js",
+  "module": "./dist/react-skeletonix.es.js",
   "types": "./dist/index.d.ts",
   "files": [
     "dist"
@@ -38,11 +38,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/devpranali/react-skeletonify.git"
+    "url": "git+https://github.com/devpranali/react-skeletonix.git"
   },
-  "homepage": "https://github.com/devpranali/react-skeletonify#readme",
+  "homepage": "https://github.com/devpranali/react-skeletonix#readme",
   "bugs": {
-    "url": "https://github.com/devpranali/react-skeletonify/issues"
+    "url": "https://github.com/devpranali/react-skeletonix/issues"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
