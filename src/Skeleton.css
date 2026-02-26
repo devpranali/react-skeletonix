@@ -7,21 +7,28 @@
 }
 
 .skeletonify-loading {
-    position: relative;
-    overflow: hidden;
     user-select: none;
-    pointer-events: none;
+}
+
+/* Prevent clicking on interactive elements inside skeletons */
+.skeletonify-loading :where(a, button, input, select, textarea, [role="button"], [tabindex]) {
+    pointer-events: none !important;
+}
+
+/* Wrapper is purely functional and should not disturb layout */
+.skeletonify-wrapper.skeletonify-loading {
     display: contents;
 }
 
-/* Static Card Background for the wrapper */
-.skeletonify-wrapper.skeletonify-loading {
-    display: block;
-    background-color: var(--skeletonify-card-bg);
-    border-radius: 12px;
-    border: 1px solid #eeeeee;
-    padding: 1px;
-    /* Avoid margin collapse */
+/* Container Mode: The wrapper itself becomes the skeleton, hiding children */
+.skeletonify-container-mode.skeletonify-loading {
+    background-color: var(--skeletonify-base-color) !important;
+    border: none !important;
+    color: transparent !important;
+}
+
+.skeletonify-container-mode.skeletonify-loading * {
+    visibility: hidden !important;
 }
 
 /* 1. Reset: Hide default content visuals but KEEP layout and border-radius */
@@ -34,12 +41,31 @@
 }
 
 /* 2. Shimmer Blocks: Targeted elements get the skeleton color */
-.skeletonify-loading :where(h1, h2, h3, h4, h5, h6, p, span, label, li, b, strong, i, u, em, button, input, textarea, .avatar, .icon, .line, div:empty, span:empty, div[style*="border-radius"]) {
+.skeletonify-loading :where(h1, h2, h3, h4, h5, h6, p, span, label, li, b, strong, i, u, em, button, input, textarea, .avatar, .icon, .line, div:empty, span:empty, div[style*="border-radius"], .sk-circle, .sk-rect, .sk-pill) {
     background-color: var(--skeletonify-base-color) !important;
     border-radius: var(--skeletonify-border-radius);
     min-height: 0.8em;
     min-width: 20px;
     display: inline-block;
+}
+
+/* Explicit Shape Utilities */
+.skeletonify-loading .sk-circle {
+    border-radius: 50% !important;
+}
+
+.skeletonify-loading .sk-rect {
+    border-radius: 4px !important;
+}
+
+.skeletonify-loading .sk-pill {
+    border-radius: 9999px !important;
+}
+
+/* Support for random widths on specific text blocks */
+.skeletonify-random-widths :where(p, li, .line, h1, h2, h3, h4, h5, h6) {
+    width: var(--skeletonify-random-width, 100%) !important;
+    max-width: 100%;
 }
 
 /* Block-level placeholders that should take full width to prevent layout collapse */
@@ -56,32 +82,38 @@
 }
 
 /* 3. Media elements */
-.skeletonify-loading img,
-.skeletonify-loading video,
-.skeletonify-loading svg,
-.skeletonify-loading canvas {
+.skeletonify-loading :where(img, video, svg, canvas, iframe) {
     visibility: hidden !important;
     background-color: var(--skeletonify-base-color) !important;
 }
 
 /* 4. Animation Variants - Only onto blocks */
-.skeletonify-animate.skeletonify-variant-shimmer :where(h1, h2, h3, h4, h5, h6, p, span, label, li, b, strong, i, u, em, button, input, textarea, .avatar, .icon, .line, .poster-placeholder, .thumbnail, div:empty, span:empty, img, svg, .movie-title, .movie-rating),
-.skeletonify-animate.skeletonify-variant-wave :where(h1, h2, h3, h4, h5, h6, p, span, label, li, b, strong, i, u, em, button, input, textarea, .avatar, .icon, .line, .poster-placeholder, .thumbnail, div:empty, span:empty, img, svg, .movie-title, .movie-rating) {
+.skeletonify-animate.skeletonify-variant-shimmer :where(h1, h2, h3, h4, h5, h6, p, span, label, li, b, strong, i, u, em, button, input, textarea, .avatar, .icon, .line, .poster-placeholder, .thumbnail, div:empty, span:empty, img, svg, .movie-title, .movie-rating, .sk-circle, .sk-rect, .sk-pill),
+.skeletonify-animate.skeletonify-variant-wave :where(h1, h2, h3, h4, h5, h6, p, span, label, li, b, strong, i, u, em, button, input, textarea, .avatar, .icon, .line, .poster-placeholder, .thumbnail, div:empty, span:empty, img, svg, .movie-title, .movie-rating, .sk-circle, .sk-rect, .sk-pill) {
+    background-size: 200% 100% !important;
+    background-repeat: no-repeat !important;
+}
+
+/* Also animate the container itself if in container mode */
+.skeletonify-animate.skeletonify-container-mode.skeletonify-variant-shimmer,
+.skeletonify-animate.skeletonify-container-mode.skeletonify-variant-wave {
     background-size: 200% 100% !important;
     background-repeat: no-repeat !important;
 }
 
 /* Variant: SHIMMER */
-.skeletonify-animate.skeletonify-variant-shimmer :where(h1, h2, h3, h4, h5, h6, p, span, label, li, b, strong, i, u, em, button, input, textarea, .avatar, .icon, .line, .poster-placeholder, .thumbnail, div:empty, span:empty, img, svg, .movie-title, .movie-rating) {
+.skeletonify-animate.skeletonify-variant-shimmer :where(h1, h2, h3, h4, h5, h6, p, span, label, li, b, strong, i, u, em, button, input, textarea, .avatar, .icon, .line, .poster-placeholder, .thumbnail, div:empty, span:empty, img, svg, .movie-title, .movie-rating, .sk-circle, .sk-rect, .sk-pill),
+.skeletonify-animate.skeletonify-container-mode.skeletonify-variant-shimmer {
     background-image: linear-gradient(90deg,
             var(--skeletonify-base-color) 25%,
-            var(--skeletonify-highlight-color) 50%,
-            var(--skeletonify-base-color) 75%) !important;
+            var(--skeletonify-highlight-color) 40%,
+            var(--skeletonify-base-color) 55%) !important;
     animation: skeletonify-shimmer var(--skeletonify-duration) infinite linear !important;
 }
 
 /* Variant: WAVE */
-.skeletonify-animate.skeletonify-variant-wave :where(h1, h2, h3, h4, h5, h6, p, span, label, li, b, strong, i, u, em, button, input, textarea, .avatar, .icon, .line, .poster-placeholder, .thumbnail, div:empty, span:empty, img, svg, .movie-title, .movie-rating) {
+.skeletonify-animate.skeletonify-variant-wave :where(h1, h2, h3, h4, h5, h6, p, span, label, li, b, strong, i, u, em, button, input, textarea, .avatar, .icon, .line, .poster-placeholder, .thumbnail, div:empty, span:empty, img, svg, .movie-title, .movie-rating, .sk-circle, .sk-rect, .sk-pill),
+.skeletonify-animate.skeletonify-container-mode.skeletonify-variant-wave {
     background-image: linear-gradient(110deg,
             var(--skeletonify-base-color) 40%,
             var(--skeletonify-highlight-color) 50%,
@@ -90,12 +122,14 @@
 }
 
 /* Variant: PULSE */
-.skeletonify-animate.skeletonify-variant-pulse :where(h1, h2, h3, h4, h5, h6, p, span, label, li, b, strong, i, u, em, button, input, textarea, .avatar, .icon, .line, .poster-placeholder, .thumbnail, div:empty, span:empty, img, svg, .movie-title, .movie-rating) {
+.skeletonify-animate.skeletonify-variant-pulse :where(h1, h2, h3, h4, h5, h6, p, span, label, li, b, strong, i, u, em, button, input, textarea, .avatar, .icon, .line, .poster-placeholder, .thumbnail, div:empty, span:empty, img, svg, .movie-title, .movie-rating, .sk-circle, .sk-rect, .sk-pill),
+.skeletonify-animate.skeletonify-container-mode.skeletonify-variant-pulse {
     animation: skeletonify-pulse var(--skeletonify-duration) infinite ease-in-out !important;
 }
 
 /* Variant: BLINK */
-.skeletonify-animate.skeletonify-variant-blink :where(h1, h2, h3, h4, h5, h6, p, span, label, li, b, strong, i, u, em, button, input, textarea, .avatar, .icon, .line, .poster-placeholder, .thumbnail, div:empty, span:empty, img, svg, .movie-title, .movie-rating) {
+.skeletonify-animate.skeletonify-variant-blink :where(h1, h2, h3, h4, h5, h6, p, span, label, li, b, strong, i, u, em, button, input, textarea, .avatar, .icon, .line, .poster-placeholder, .thumbnail, div:empty, span:empty, img, svg, .movie-title, .movie-rating, .sk-circle, .sk-rect, .sk-pill),
+.skeletonify-animate.skeletonify-container-mode.skeletonify-variant-blink {
     animation: skeletonify-blink var(--skeletonify-duration) infinite ease-in-out !important;
 }
 
