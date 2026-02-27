@@ -13,7 +13,7 @@ export interface SkeletonThemeProps {
     borderRadius?: string | number;
     animate?: boolean;
     variant?: 'shimmer' | 'pulse' | 'wave' | 'blink' | 'none';
-    useAST?: boolean; // Opt-in to the advanced AST recursive parsing
+    useAST?: boolean;
 }
 
 const SkeletonThemeContext = createContext<SkeletonThemeProps | undefined>(undefined);
@@ -31,26 +31,31 @@ export interface SkeletonProps<T = any> extends Omit<React.HTMLAttributes<HTMLDi
     children?: React.ReactNode | ((item: T | null, index: number) => React.ReactNode);
     data?: T[];
     count?: number;
-    duration?: number; // Animation duration in seconds
-    animate?: boolean; // Toggle animation
-    variant?: 'shimmer' | 'pulse' | 'wave' | 'blink' | 'none'; // Animation type
+    duration?: number;
+    animate?: boolean;
+    variant?: 'shimmer' | 'pulse' | 'wave' | 'blink' | 'none';
     baseColor?: string;
     highlightColor?: string;
     borderRadius?: string | number;
-    circle?: boolean; // Force all direct children masks to be circles
-    excludeSelector?: string; // CSS selector of elements to hide during loading
-    showWrapper?: boolean; // Whether to show the static card-style background
-    randomWidth?: boolean | [number, number]; // Whether to apply random widths to text lines, or a range [min, max]
-    container?: boolean; // If true, masks the entire wrapper as a single block, ignoring children
-    useAST?: boolean; // Use React.Children recursive traversal instead of pure CSS
-    exceptTags?: string[]; // Array of HTML tags to ignore (AST mode only)
-    exceptTagGroups?: HtmlTagGroup[]; // Semantic groups to ignore (AST mode only)
+    circle?: boolean;
+    excludeSelector?: string;
+    showWrapper?: boolean;
+    randomWidth?: boolean | [number, number];
+    container?: boolean;
+    useAST?: boolean;
+    exceptTags?: string[];
+    exceptTagGroups?: HtmlTagGroup[];
 }
 
-export const Skeleton = forwardRef(<T,>(props: SkeletonProps<T>, ref: React.ForwardedRef<HTMLDivElement>) => {
+/**
+ * Internal implementation of the Skeleton component
+ */
+const SkeletonInternal = <T,>(
+    props: SkeletonProps<T>,
+    ref: React.ForwardedRef<HTMLDivElement>
+) => {
     const theme = useContext(SkeletonThemeContext);
 
-    // Destructure props, using theme defaults if not provided
     const {
         loading,
         children,
@@ -104,7 +109,6 @@ export const Skeleton = forwardRef(<T,>(props: SkeletonProps<T>, ref: React.Forw
         </style>
     ) : null;
 
-    // --- AST Mode Orchestration ---
     const addSkeleton = useAddSkeleton({
         className: `skeletonify-loading ${animate ? 'skeletonify-animate' : ''} skeletonify-variant-${variant} ${circle ? 'skeletonify-circle' : ''} ${container ? 'skeletonify-container-mode' : ''} ${randomWidth ? 'skeletonify-random-widths' : ''}`,
         style: { ...customStyles, ...getWidthStyle() },
@@ -112,7 +116,6 @@ export const Skeleton = forwardRef(<T,>(props: SkeletonProps<T>, ref: React.Forw
         exceptTagGroups
     });
 
-    // Handle Function-as-Child pattern
     if (typeof children === 'function') {
         const itemsToRender = loading
             ? Array.from({ length: count }, (_, i) => children(null, i))
@@ -122,7 +125,6 @@ export const Skeleton = forwardRef(<T,>(props: SkeletonProps<T>, ref: React.Forw
             <>
                 {loading && excludeStyles}
                 {itemsToRender.map((content, i) => {
-                    // If AST mode, transform the generated content
                     const finalContent = (loading && useAST && React.isValidElement(content))
                         ? addSkeleton(content)
                         : content;
@@ -130,7 +132,6 @@ export const Skeleton = forwardRef(<T,>(props: SkeletonProps<T>, ref: React.Forw
                     const skeletonClassName = `${className} ${!useAST && loading ? 'skeletonify-loading' : ''} ${!useAST && loading && animate ? 'skeletonify-animate' : ''} ${!useAST && loading ? `skeletonify-variant-${variant}` : ''} ${!useAST && loading && circle ? 'skeletonify-circle' : ''} ${!useAST && loading && container ? 'skeletonify-container-mode' : ''} ${!useAST && randomWidth ? 'skeletonify-random-widths' : ''}`.trim();
                     const skeletonStyle = loading && !useAST ? { ...customStyles, ...getWidthStyle() } : style;
 
-                    // Avoid destructive <div> wrappers by cloning native elements
                     if (React.isValidElement(finalContent) && typeof finalContent.type === 'string') {
                         const element = finalContent as React.ReactElement<any>;
                         return React.cloneElement(element, {
@@ -143,7 +144,6 @@ export const Skeleton = forwardRef(<T,>(props: SkeletonProps<T>, ref: React.Forw
                         } as any);
                     }
 
-                    // Fallback wrapper for text nodes or custom components
                     return (
                         <div
                             key={i}
@@ -161,23 +161,16 @@ export const Skeleton = forwardRef(<T,>(props: SkeletonProps<T>, ref: React.Forw
         );
     }
 
-    // Default behavior for static children
-    if (!loading) {
-        return <>{children}</>;
-    }
+    if (!loading) return <>{children}</>;
 
-    // --- Static Children ---
     const skeletonClassName = `${className} ${!useAST ? 'skeletonify-loading' : ''} ${!useAST && animate ? 'skeletonify-animate' : ''} ${!useAST ? `skeletonify-variant-${variant}` : ''} ${!useAST && circle ? 'skeletonify-circle' : ''} ${!useAST && container ? 'skeletonify-container-mode' : ''} ${!useAST && randomWidth ? 'skeletonify-random-widths' : ''}`.trim();
     const skeletonStyle = !useAST ? { ...customStyles, ...getWidthStyle() } : style;
 
     const skeletonItems = Array.from({ length: count }, (_, i) => {
-        // If AST mode, we recursively map the children, putting them in an invisible state
-        // and appending skeletonized versions. If not, we just rely on CSS inheritance.
         const finalChildren = (loading && useAST)
             ? React.Children.map(children, (child) => addSkeleton(child))
             : children;
 
-        // Avoid destructive <div> wrappers by cloning native elements
         if (React.isValidElement(finalChildren) && typeof finalChildren.type === 'string') {
             const element = finalChildren as React.ReactElement<any>;
             return React.cloneElement(element, {
@@ -191,7 +184,6 @@ export const Skeleton = forwardRef(<T,>(props: SkeletonProps<T>, ref: React.Forw
             } as any);
         }
 
-        // Fallback
         return (
             <div
                 key={i}
@@ -213,8 +205,15 @@ export const Skeleton = forwardRef(<T,>(props: SkeletonProps<T>, ref: React.Forw
             {skeletonItems}
         </>
     );
-});
+};
 
-Skeleton.displayName = 'Skeleton';
+/**
+ * The Skeleton component with full generic type support.
+ */
+export const Skeleton = forwardRef(SkeletonInternal) as <T = any>(
+    props: SkeletonProps<T> & { ref?: React.ForwardedRef<HTMLDivElement> }
+) => React.ReactElement | null;
+
+(Skeleton as any).displayName = 'Skeleton';
 
 export default Skeleton;
