@@ -32,7 +32,7 @@
 }
 
 /* 1. Reset: Hide default content visuals but KEEP layout and border-radius */
-.skeletonify-loading * {
+.skeletonify-loading *:not(.not-skeleton) {
     color: transparent !important;
     border-color: transparent !important;
     background-color: transparent !important;
@@ -41,7 +41,8 @@
 }
 
 /* 2. Shimmer Blocks: Targeted elements get the skeleton color */
-.skeletonify-loading :where(h1, h2, h3, h4, h5, h6, p, span, label, li, b, strong, i, u, em, button, input, textarea, .avatar, .icon, .line, div:empty, span:empty, div[style*="border-radius"], .sk-circle, .sk-rect, .sk-pill) {
+/* We target specific semantic elements. We avoid broad 'div' unless it's a known utility class or empty placeholder */
+.skeletonify-loading :where(h1, h2, h3, h4, h5, h6, p, span, label, li, b, strong, i, u, em, button, input, textarea, .avatar, .icon, .line, div:empty, span:empty, .sk-circle, .sk-rect, .sk-pill, .sk-block):not(.not-skeleton) {
     background-color: var(--skeletonify-base-color) !important;
     border-radius: var(--skeletonify-border-radius);
     min-height: 0.8em;
@@ -179,7 +180,14 @@
     }
 }
 
-/* Manual circle force */
-.skeletonify-circle * {
+/* Manual circle force - applies to the element itself and all descendants */
+.skeletonify-circle,
+.skeletonify-circle *:not(.not-skeleton) {
     border-radius: 50% !important;
+}
+
+/* Manual exclusion utility */
+.skeletonify-loading .not-skeleton {
+    visibility: visible !important;
+    opacity: 1 !important;
 }
