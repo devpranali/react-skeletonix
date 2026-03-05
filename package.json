@@ -1,10 +1,19 @@
 {
   "name": "react-skeletonix",
-  "version": "1.0.0",
-  "description": "A dynamic skeleton loader that automatically generates loading states from child components.",
+  "version": "1.0.2",
+  "description": "The smartest and most performant React skeleton loader. Automatically generates high-fidelity skeleton screens and loading placeholders from existing components with zero configuration. Supports shimmer, pulse, wave, and blink animations for superior UX.",
   "main": "./dist/react-skeletonix.umd.js",
   "module": "./dist/react-skeletonix.es.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/react-skeletonix.es.js",
+      "require": "./dist/react-skeletonix.umd.js"
+    },
+    "./dist/style.css": "./dist/style.css",
+    "./style.css": "./dist/style.css"
+  },
   "files": [
     "dist"
   ],
@@ -19,7 +28,24 @@
     "loading",
     "placeholder",
     "ui",
-    "dynamic"
+    "dynamic",
+    "shimmer",
+    "pulse",
+    "auto-generated",
+    "zero-config",
+    "content-loader",
+    "typescript",
+    "ux",
+    "loading-states",
+    "skeletonix",
+    "skeleton-loader",
+    "skeleton-ui",
+    "react-skeleton-loader",
+    "skeleton-screen",
+    "react-loading-skeleton",
+    "content-placeholder",
+    "ghost-elements",
+    "ux-design"
   ],
   "author": {
     "name": "Amit Kumar",
@@ -40,7 +66,7 @@
     "type": "git",
     "url": "git+https://github.com/devpranali/react-skeletonix.git"
   },
-  "homepage": "https://github.com/devpranali/react-skeletonix#readme",
+  "homepage": "https://doc.react-skeletonix.devpranali.com/",
   "bugs": {
     "url": "https://github.com/devpranali/react-skeletonix/issues"
   },

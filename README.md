@@ -1,112 +1,147 @@
 # react-skeletonix
 
-A dynamic, zero-config React skeleton loader that automatically generates loading states directly from your UI components by masking them.
+[![npm version](https://img.shields.io/npm/v/react-skeletonix.svg?style=flat-square)](https://www.npmjs.com/package/react-skeletonix)
+[![npm downloads](https://img.shields.io/npm/dm/react-skeletonix.svg?style=flat-square)](https://www.npmjs.com/package/react-skeletonix)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
+[![Bundle Size](https://img.shields.io/bundlephobia/minzip/react-skeletonix?style=flat-square)](https://bundlephobia.com/package/react-skeletonix)
 
-## Simple Quick Start
+**[👉 Full Documentation & Live Demo](https://doc.react-skeletonix.devpranali.com/)**
 
-1. **Install the package:**
+**The smartest React skeleton loader.** Automatically generates high-fidelity, high-contrast loading states from your existing child components with **zero configuration**.
 
-   ```bash
-   npm install react-skeletonix
-   ```
-   *or*
-   ```bash
-   yarn add react-skeletonix
-   ```
+## Why react-skeletonix?
 
-2. **Wrap your component:**
+Unlike traditional skeleton libraries that require you to manually design a separate "skeleton version" of your UI, `react-skeletonix` traverses your actual component tree and automatically creates a geometric mask that perfectly matches your layout.
 
-   ```tsx
-   import Skeleton from 'react-skeletonix';
-   import 'react-skeletonix/dist/style.css'; // Don't forget the styles!
+- 🧠 **Automatic Shape Generation**: No more manual width/height definitions.
+- ⚡ **Zero Configuration**: Just wrap your component and it "just works".
+- 🎨 **Fully Customizable**: Adjust colors, duration, and animation variants (shimmer, pulse, wave).
+- 📦 **Ultra Lightweight**: Zero dependencies (only peer-react).
+- 🦾 **TypeScript First**: Full generic type support for `Skeleton<T>`.
 
-   function Profile({ loading, user }) {
-     return (
-       <Skeleton loading={loading}>
-         <div className="card">
-           <img src={user?.avatar} alt="Avatar" className="avatar" />
-           <h2>{user?.name || 'Loading Name...'}</h2>
-           <p>{user?.bio || 'Loading Bio...'}</p>
-         </div>
-       </Skeleton>
-     );
-   }
-   ```
-   **That's it!** `react-skeletonix` will automatically mimic the layout of the wrapped DOM nodes while `loading` is `true`.
+## installation
 
-## Props & Parameters Explanation
+```bash
+npm install react-skeletonix
+```
 
-Here is a detailed breakdown of all the parameters you can pass to the `<Skeleton>` component and what they do:
+## Quick Start (Smart Rendering)
 
-| Parameter | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| **`loading`** | `boolean` | **Required** | The main toggle. When `true`, the skeleton animation is rendered over your components. When `false`, your actual child components render normally. |
-| **`count`** | `number` | `1` | The number of times the child element should be duplicated while loading. This is incredibly useful for simulating a list of items using CSS Grid or Flexbox before you actually have the array of data. |
-| **`baseColor`** | `string` | `#f0f0f0` | The background color of the skeleton shapes. Change this to match your app's background or dark mode theme. |
-| **`highlightColor`** | `string` | `#f8f8f8` | The color of the animated shimmer effect that sweeps across the skeletons. |
-| **`duration`** | `number` | `1.5` | The speed of the animation in seconds. Lower numbers (e.g., `1.0`) make the shimmer move faster, while higher numbers (e.g., `2.5`) make it move slower. |
-| **`circle`** | `boolean` | `false` | When set to `true`, forces the generated skeleton shapes to have a 50% border radius (making squares look like circles). Useful for wrapping avatars or profile pictures explicitly. |
-| **`data`** | `any` | `undefined` | Used with Function-as-Child (FaC). You can pass dummy data in here to satisfy typescript or structural requirements of your child component while loading. |
-| **`excludeSelector`** | `string` | `undefined` | A CSS class or selector string. Any child node matching this selector will NOT be given a skeleton mask. |
+The most powerful way to use `react-skeletonix` is through **Function-as-Child (FaC)**. It allows you to define your UI once and let the library handle the injection of dummy data for a perfect "ghost" state.
 
-## Examples
+### Simple Example
+```tsx
+import Skeleton from 'react-skeletonix';
+import 'react-skeletonix/dist/style.css'; 
 
-### 1. Using with Flexbox or CSS Grid
-When building a responsive layout using flexbox or CSS grid, you can combine the `count` prop with your container to create a beautifully animated, repeating loading grid. As long as your parent container has `display: flex` or `display: grid`, the `<Skeleton>` component will spawn its cloned children perfectly into that layout.
+function Profile({ loading, user }) {
+  return (
+    <Skeleton loading={loading} data={{ name: 'Loading Name...', bio: 'Loading Bio...' }}>
+      {(item) => (
+        <div className="card">
+          <h2>{item?.name || user?.name}</h2>
+          <p>{item?.bio || user?.bio}</p>
+        </div>
+      )}
+    </Skeleton>
+  );
+}
+```
+
+## TypeScript Support
+
+`react-skeletonix` is built with TypeScript and provides full generic support for the `data` prop and render functions.
+
+### Defining Types
+```tsx
+interface User {
+  id: number;
+  name: string;
+  avatar: string;
+}
+
+// Pass the type to the Skeleton component
+<Skeleton<User> 
+  loading={loading} 
+  data={{ id: 0, name: 'John Doe', avatar: '' }}
+>
+  {(item) => (
+    <div>{item?.name}</div> // item is properly typed as User | null
+  )}
+</Skeleton>
+```
+
+## Animation Variants
+
+Customize the "feel" of your loading states with different built-in animation variants.
+
+| Variant | Description |
+| :--- | :--- |
+| `shimmer` (Default) | A smooth light sweep across the element. |
+| `pulse` | Elements gently fade in and out. |
+| `wave` | A flowing wave effect from left to right. |
+| `blink` | A sharp on/off blinking animation. |
+| `none` | Static grey placeholders with no animation. |
 
 ```tsx
-<div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
-  <Skeleton loading={loading} count={4}>
-    {/* This card will be repeated 4 times side-by-side while loading */}
-    <div className="flex-item-card" style={{ width: '250px' }}>
-      <div className="thumbnail"></div>
-      <h3>Product Title</h3>
-      <p>Product Description goes here</p>
-    </div>
+<Skeleton loading={true} variant="pulse">
+  <MyComponent />
+</Skeleton>
+```
+
+## Advanced Examples
+
+### 1. Complex Data Mapping
+Simulate a list of complex objects with nested styling.
+
+```tsx
+<div className="grid">
+  <Skeleton<Product> 
+    loading={loading} 
+    count={6} 
+    variant="shimmer"
+    data={[
+      { id: 1, title: 'Premium Wireless Headphones', price: '$299.00', image: '' },
+      { id: 2, title: 'Mechanical Gaming Keyboard', price: '$159.00', image: '' }
+    ]}
+  >
+    {(item) => (
+      <div className="product-card">
+        <div className="image-placeholder" style={{ height: '200px' }} />
+        <h3>{item?.title}</h3>
+        <span className="price">{item?.price}</span>
+        <button>Buy Now</button>
+      </div>
+    )}
   </Skeleton>
 </div>
 ```
 
-### 2. Customizing the Animation Effect
-You can change the colors and speed of the loading animation. For instance, to create a fast, dark-mode skeleton:
+### 2. Using `showWrapper`
+By default, the `Skeleton` wraps children in a helper `div` to apply masking. In some CSS Grid or Flex layouts, this wrapper might break your styles. Set `showWrapper={false}` to apply the skeleton classes directly to the first child element.
 
 ```tsx
-<Skeleton 
-  loading={true} 
-  baseColor="#2d3436" 
-  highlightColor="#636e72" 
-  duration={0.8} // Faster animation (0.8 seconds)
->
-  <div className="dark-card">
-    <p>Dark mode content here</p>
-  </div>
-</Skeleton>
+<div className="flex-container">
+  <Skeleton loading={loading} showWrapper={false}>
+    <div className="flex-item">I am the direct child of the flex container</div>
+  </Skeleton>
+</div>
 ```
 
-### 3. Rendering as Circles
-Force the skeleton effect to render as circles instead of rounded rectangles (useful for avatars).
+## Props & Parameters Explanation
 
-```tsx
-<Skeleton loading={loading} circle>
-  <div className="avatar-wrapper">
-    <img src={userImage} />
-  </div>
-</Skeleton>
-```
-
-### 4. Function as Child (Data Injection)
-Provide fake data explicitly by using a render prop (Function-as-Child) and the `data` prop.
-
-```tsx
-<Skeleton loading={loading} count={3} data={{ id: 0, title: 'Loading...', desc: '...' }}>
-  {(item) => (
-    <div key={item.id} className="post">
-      <h4>{item.title}</h4>
-      <p>{item.desc}</p>
-    </div>
-  )}
-</Skeleton>
-```
+| Parameter | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| **`loading`** | `boolean` | **Required** | The main toggle. |
+| **`data`** | `T` | `undefined` | Used with Function-as-Child to inject template data. |
+| **`variant`** | `shimmer \| pulse \| wave \| blink \| none` | `shimmer` | The type of animation effect. |
+| **`showWrapper`** | `boolean` | `true` | Whether to wrap children in a technical `div`. Set to `false` for direct style application. |
+| **`count`** | `number` | `1` | Number of times to duplicate children while loading. |
+| **`baseColor`** | `string` | `#f0f0f0` | Background color of skeleton shapes. |
+| **`highlightColor`** | `string` | `#f8f8f8` | Color of the animated shimmer. |
+| **`duration`** | `number` | `1.5` | Speed of animation in seconds. |
+| **`circle`** | `boolean` | `false` | Forces circular shapes (100% border-radius). |
+| **`excludeSelector`** | `string` | `undefined` | CSS selector to skip specific children. |
 
 ## FAQ
 
@@ -114,19 +149,10 @@ Provide fake data explicitly by using a render prop (Function-as-Child) and the 
 A: No! `react-skeletonix` automatically assumes the exact geometric bounds of the children you wrap.
 
 **Q: Why do I need to include the CSS file?**  
-A: The CSS file provides essential layout utilities, `pointer-events: none` attributes out of the box, and the high-performance gradient animations that drive the shimmer effect.
+A: The CSS file provides essential layout utilities and high-performance animations.
 
-**Q: Does it replace my actual elements while loading?**  
-A: No. It uses CSS pseudo-classes, masks, and pointer overlays. The underlying structural DOM is kept intact but visually obscured with a skeleton effect.
+## Performance notes
 
-## Limitations explained
-
-- **Content Sizing Necessity:** Skeletons only appear if the elements have calculated dimensions. An empty `<div>` without explicit CSS width/height might collapse to 0 height, which means the skeleton will have 0 height. Ensure you have placeholder text (`&nbsp;`) or dummy data during loading tests if you don't use the `data` prop.
-- **Complex Third-Party Inputs:** Opaque libraries (like advanced interactive maps, canvas elements, or un-stylable iframes) may not get masked perfectly because `react-skeletonix` relies on traversing standard HTML nodes.
-- **Background Images:** Masking elements that rely heavily on `min-height` and full-cover `background-image` properties can sometimes result in unintended rendering if they have no inner content.
-
-## Performance notes included
-
-- **No Layout Thrashing:** Because the real DOM layout is preserved and simply "masked" instead of fully swapping component trees (e.g., `<SkeletonNode />` vs `<RealNode />`), your browser calculates the layout once, which leads to fewer reflows.
-- **Hardware-Accelerated CSS:** The shifting gradient used for the shimmer animation runs solely via hardware-accelerated CSS. React's main thread and JavaScript loop remain untouched and entirely free.
-- **Granular is Better:** While `react-skeletonix` is very lightweight, spanning a single `<Skeleton>` component across thousands of deeply nested nodes *could* cause slight initial painting delays. For extremely complex pages, it is more performant to individually wrap modular groups of inputs/cards rather than your entire `<App />` component.
+- **No Layout Thrashing:** The real DOM layout is preserved and simply "masked".
+- **Hardware-Accelerated CSS:** Shimmer animations run solely via GPU-accelerated CSS.
+- **Granular is Better:** For extremely complex pages, wrap modular groups rather than the entire app.
