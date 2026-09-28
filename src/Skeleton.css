@@ -1,197 +1,275 @@
-:root {
-    --skeletonify-base-color: #f0f0f0;
-    --skeletonify-highlight-color: #fcfcfc;
-    --skeletonify-duration: 1.5s;
-    --skeletonify-border-radius: 4px;
-    --skeletonify-card-bg: #fafafa;
-}
+/*
+ * react-skeletonix
+ *
+ * The component puts `skx-loading` on a "root": either the wrapped element
+ * itself or a `display: contents` wrapper. Every rule below matches the root
+ * AND its descendants, so a single <h4> child is masked just like a card.
+ *
+ * All selectors are wrapped in :where() (zero specificity) so authors can
+ * still override shapes (e.g. border-radius) from their own CSS.
+ */
 
-.skeletonify-loading {
-    user-select: none;
-}
+/* ------------------------------------------------------------------ */
+/* Structural helpers                                                  */
+/* ------------------------------------------------------------------ */
 
-/* Prevent clicking on interactive elements inside skeletons */
-.skeletonify-loading :where(a, button, input, select, textarea, [role="button"], [tabindex]) {
-    pointer-events: none !important;
-}
-
-/* Wrapper is purely functional and should not disturb layout */
-.skeletonify-wrapper.skeletonify-loading {
+.skx-wrapper,
+skx-keep,
+skx-ignore,
+skx-unite {
     display: contents;
 }
 
-/* Container Mode: The wrapper itself becomes the skeleton, hiding children */
-.skeletonify-container-mode.skeletonify-loading {
-    background-color: var(--skeletonify-base-color) !important;
-    border: none !important;
-    color: transparent !important;
+/* ------------------------------------------------------------------ */
+/* Tokens (resolved on every root)                                     */
+/* Public vars: --skx-base-color, --skx-highlight-color,               */
+/* --skx-duration, --skx-border-radius. Old --skeletonify-* vars are   */
+/* still honoured as fallbacks.                                        */
+/* ------------------------------------------------------------------ */
+
+.skx-loading {
+    --skx-_base: var(--skx-base-color, var(--skeletonify-base-color, var(--skx-scheme-base, #ebebeb)));
+    --skx-_highlight: var(--skx-highlight-color, var(--skeletonify-highlight-color, var(--skx-scheme-highlight, #f5f5f5)));
+    --skx-_duration: var(--skx-duration, var(--skeletonify-duration, 1.5s));
+    --skx-_radius: var(--skx-border-radius, var(--skeletonify-border-radius, 4px));
 }
 
-.skeletonify-container-mode.skeletonify-loading * {
-    visibility: hidden !important;
+.skx-scheme-dark {
+    --skx-scheme-base: #2a2a2e;
+    --skx-scheme-highlight: #3a3a40;
 }
 
-/* 1. Reset: Hide default content visuals but KEEP layout and border-radius */
-.skeletonify-loading *:not(.not-skeleton) {
-    color: transparent !important;
+@media (prefers-color-scheme: dark) {
+    .skx-scheme-auto {
+        --skx-scheme-base: #2a2a2e;
+        --skx-scheme-highlight: #3a3a40;
+    }
+}
+
+/* Animation variants only set variables; the paint rule consumes them. */
+.skx-animate.skx-v-shimmer {
+    --skx-_image: linear-gradient(90deg, var(--skx-_base) 30%, var(--skx-_highlight) 50%, var(--skx-_base) 70%);
+    --skx-_anim: skx-shimmer var(--skx-_duration) linear infinite;
+}
+
+.skx-animate.skx-v-wave {
+    --skx-_image: linear-gradient(110deg, var(--skx-_base) 35%, var(--skx-_highlight) 50%, var(--skx-_base) 65%);
+    --skx-_anim: skx-wave var(--skx-_duration) ease-in-out infinite;
+}
+
+.skx-animate.skx-v-pulse {
+    --skx-_anim: skx-pulse var(--skx-_duration) ease-in-out infinite;
+}
+
+.skx-animate.skx-v-blink {
+    --skx-_anim: skx-blink var(--skx-_duration) steps(1, end) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .skx-loading {
+        --skx-_anim: none !important;
+        --skx-_image: none !important;
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* 1. Reset: hide the real visuals but keep the exact layout           */
+/* ------------------------------------------------------------------ */
+
+:where(.skx-loading, .skx-loading *):not(:where(.skx-loading [data-skeleton="keep"], .skx-loading [data-skeleton="keep"] *, .skx-loading .not-skeleton, .skx-loading .not-skeleton *)) {
+    text-shadow: none !important;
     border-color: transparent !important;
+    outline-color: transparent !important;
     background-color: transparent !important;
     background-image: none !important;
     box-shadow: none !important;
+    caret-color: transparent !important;
+    text-decoration-color: transparent !important;
+    user-select: none !important;
+    pointer-events: none !important;
 }
 
-/* 2. Shimmer Blocks: Targeted elements get the skeleton color */
-/* We target specific semantic elements. We avoid broad 'div' unless it's a known utility class or empty placeholder */
-.skeletonify-loading :where(h1, h2, h3, h4, h5, h6, p, span, label, li, b, strong, i, u, em, button, input, textarea, .avatar, .icon, .line, div:empty, span:empty, .sk-circle, .sk-rect, .sk-pill, .sk-block):not(.not-skeleton) {
-    background-color: var(--skeletonify-base-color) !important;
-    border-radius: var(--skeletonify-border-radius);
-    min-height: 0.8em;
-    min-width: 20px;
-    display: inline-block;
+/* Text colour is inherited, so it is not hidden on ancestors of kept
+   content; otherwise <SkeletonKeep> children would inherit transparent. */
+:where(.skx-loading, .skx-loading *):not(:where(.skx-loading [data-skeleton="keep"], .skx-loading [data-skeleton="keep"] *, .skx-loading .not-skeleton, .skx-loading .not-skeleton *, :has([data-skeleton="keep"], .not-skeleton))) {
+    color: transparent !important;
+    -webkit-text-fill-color: transparent !important;
 }
 
-/* Explicit Shape Utilities */
-.skeletonify-loading .sk-circle {
+:where(.skx-loading, .skx-loading *):not(:where(.skx-loading [data-skeleton="keep"], .skx-loading [data-skeleton="keep"] *, .skx-loading .not-skeleton, .skx-loading .not-skeleton *))::placeholder {
+    color: transparent !important;
+}
+
+:where(.skx-loading, .skx-loading *):not(:where(.skx-loading [data-skeleton="keep"], .skx-loading [data-skeleton="keep"] *, .skx-loading .not-skeleton, .skx-loading .not-skeleton *))::before,
+:where(.skx-loading, .skx-loading *):not(:where(.skx-loading [data-skeleton="keep"], .skx-loading [data-skeleton="keep"] *, .skx-loading .not-skeleton, .skx-loading .not-skeleton *))::after {
+    color: transparent !important;
+    border-color: transparent !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* ------------------------------------------------------------------ */
+/* 2. Paint: elements that become skeleton blocks                      */
+/*                                                                    */
+/*  - media & form controls                                            */
+/*  - text tags (p, h1-h6, label, ...)                                 */
+/*  - "text containers": any element whose element children are only   */
+/*    inline formatting tags, i.e. <div>John</div>, <a>link</a>,       */
+/*    <td>cell</td>, <span>x</span>, and empty sized placeholders      */
+/*  - explicit shapes: .sk-* classes and data-skeleton="block|line"    */
+/*                                                                    */
+/* Never painted: kept/ignored subtrees, non-visual tags, and anything */
+/* inside an element that is already painted (avoids double blocks).  */
+/* ------------------------------------------------------------------ */
+
+:where(.skx-loading, .skx-loading *):where(img, svg, video, input:not([type="hidden"]), textarea, select, button, progress, meter, p, h1, h2, h3, h4, h5, h6, label, figcaption, legend, caption, summary, dt, .sk-block, .sk-circle, .sk-rect, .sk-pill, .sk-line, [data-skeleton="block"], [data-skeleton="line"], :not(:has(> :not(br, wbr, b, i, u, s, strong, em, small, mark, sub, sup, code, kbd, abbr, time, q, cite, var, samp, del, ins)))):not(:where(br, wbr, option, optgroup, script, style, template, noscript, source, track, area, param, col, colgroup, datalist, slot, link, meta, title, base, map, canvas, iframe, embed, object, audio, skx-keep, skx-ignore, skx-unite, .skx-wrapper, .skx-loading [data-skeleton="keep"], .skx-loading [data-skeleton="keep"] *, .skx-loading .not-skeleton, .skx-loading .not-skeleton *, .skx-loading [data-skeleton="ignore"] *, :where(.skx-loading, .skx-loading *):where(p, h1, h2, h3, h4, h5, h6, label, figcaption, legend, caption, summary, dt, button, select, textarea, svg, .sk-block, .sk-circle, .sk-rect, .sk-pill, .sk-line, [data-skeleton="block"], [data-skeleton="line"], :not(:has(> :not(br, wbr, b, i, u, s, strong, em, small, mark, sub, sup, code, kbd, abbr, time, q, cite, var, samp, del, ins)))) *)),
+/* Solid blocks: container mode and <SkeletonUnite> */
+:where(.skx-loading.skx-container:not(.skx-wrapper), .skx-loading.skx-container.skx-wrapper > *, .skx-loading skx-unite > *, .skx-loading [data-skeleton="unite"]:not(skx-unite)) {
+    background-color: var(--skx-_base) !important;
+    background-image: var(--skx-_image, none) !important;
+    background-size: 200% 100% !important;
+    background-repeat: no-repeat !important;
+    animation: var(--skx-_anim, none) !important;
+    animation-delay: var(--skx-delay, 0s) !important;
+}
+
+/* Text-like blocks: paint only the content box (not padding) and round
+   the corners. Zero specificity so an author border-radius wins. */
+:where(.skx-loading, .skx-loading *):where(p, h1, h2, h3, h4, h5, h6, label, figcaption, legend, caption, summary, dt, .sk-line, [data-skeleton="line"], :not(:empty):not(:has(> :not(br, wbr, b, i, u, s, strong, em, small, mark, sub, sup, code, kbd, abbr, time, q, cite, var, samp, del, ins)))) {
+    background-clip: content-box !important;
+    border-radius: var(--skx-_radius);
+}
+
+:where(.skx-loading, .skx-loading *):where(img, video, input, textarea, select, button, progress, meter, .sk-block, .sk-rect, [data-skeleton="block"]) {
+    border-radius: var(--skx-_radius);
+}
+
+/* Explicit shape utilities */
+:where(.skx-loading, .skx-loading *):where(.sk-circle) {
     border-radius: 50% !important;
 }
 
-.skeletonify-loading .sk-rect {
+:where(.skx-loading, .skx-loading *):where(.sk-rect) {
     border-radius: 4px !important;
 }
 
-.skeletonify-loading .sk-pill {
+:where(.skx-loading, .skx-loading *):where(.sk-pill) {
     border-radius: 9999px !important;
 }
 
-/* Support for random widths on specific text blocks */
-.skeletonify-random-widths :where(p, li, .line, h1, h2, h3, h4, h5, h6) {
-    width: var(--skeletonify-random-width, 100%) !important;
-    max-width: 100%;
+/* ------------------------------------------------------------------ */
+/* 3. Media: keep the box, hide the pixels                            */
+/* ------------------------------------------------------------------ */
+
+/* Pushing the image out of its own box keeps the painted background
+   visible (visibility:hidden would hide the background too). */
+:where(.skx-loading, .skx-loading *):where(img, video):not(:where(.skx-loading [data-skeleton="keep"], .skx-loading [data-skeleton="keep"] *, .skx-loading .not-skeleton, .skx-loading .not-skeleton *)) {
+    object-position: -99999px -99999px !important;
 }
 
-/* Block-level placeholders that should take full width to prevent layout collapse */
-.skeletonify-loading :where(h1, h2, h3, h4, h5, h6, p, .poster-placeholder, .thumbnail, .movie-title, .movie-rating) {
-    display: block;
-    width: 100%;
-    min-height: 1.2em;
-}
-
-/* Fallback for common utility classes if inherit is tricky */
-.skeletonify-loading .avatar,
-.skeletonify-loading .icon {
-    border-radius: 50% !important;
-}
-
-/* 3. Media elements */
-.skeletonify-loading :where(img, video, svg, canvas, iframe) {
+:where(.skx-loading, .skx-loading *):where(svg):not(:where(.skx-loading [data-skeleton="keep"], .skx-loading [data-skeleton="keep"] *, .skx-loading .not-skeleton, .skx-loading .not-skeleton *)) * {
     visibility: hidden !important;
-    background-color: var(--skeletonify-base-color) !important;
 }
 
-/* 4. Animation Variants - Only onto blocks */
-.skeletonify-animate.skeletonify-variant-shimmer :where(h1, h2, h3, h4, h5, h6, p, span, label, li, b, strong, i, u, em, button, input, textarea, .avatar, .icon, .line, .poster-placeholder, .thumbnail, div:empty, span:empty, img, svg, .movie-title, .movie-rating, .sk-circle, .sk-rect, .sk-pill),
-.skeletonify-animate.skeletonify-variant-wave :where(h1, h2, h3, h4, h5, h6, p, span, label, li, b, strong, i, u, em, button, input, textarea, .avatar, .icon, .line, .poster-placeholder, .thumbnail, div:empty, span:empty, img, svg, .movie-title, .movie-rating, .sk-circle, .sk-rect, .sk-pill) {
-    background-size: 200% 100% !important;
-    background-repeat: no-repeat !important;
+/* Content that cannot be recoloured is hidden (layout is kept). */
+:where(.skx-loading, .skx-loading *):where(canvas, iframe, embed, object, audio):not(:where(.skx-loading [data-skeleton="keep"], .skx-loading [data-skeleton="keep"] *, .skx-loading .not-skeleton, .skx-loading .not-skeleton *)) {
+    visibility: hidden !important;
 }
 
-/* Also animate the container itself if in container mode */
-.skeletonify-animate.skeletonify-container-mode.skeletonify-variant-shimmer,
-.skeletonify-animate.skeletonify-container-mode.skeletonify-variant-wave {
-    background-size: 200% 100% !important;
-    background-repeat: no-repeat !important;
+/* ------------------------------------------------------------------ */
+/* 4. Control markers                                                  */
+/* ------------------------------------------------------------------ */
+
+/* Ignore: invisible while loading, but still takes up its space. */
+:where(.skx-loading[data-skeleton="ignore"], .skx-loading [data-skeleton="ignore"], .skx-loading [data-skeleton="ignore"] *) {
+    visibility: hidden !important;
 }
 
-/* Variant: SHIMMER */
-.skeletonify-animate.skeletonify-variant-shimmer :where(h1, h2, h3, h4, h5, h6, p, span, label, li, b, strong, i, u, em, button, input, textarea, .avatar, .icon, .line, .poster-placeholder, .thumbnail, div:empty, span:empty, img, svg, .movie-title, .movie-rating, .sk-circle, .sk-rect, .sk-pill),
-.skeletonify-animate.skeletonify-container-mode.skeletonify-variant-shimmer {
-    background-image: linear-gradient(90deg,
-            var(--skeletonify-base-color) 25%,
-            var(--skeletonify-highlight-color) 40%,
-            var(--skeletonify-base-color) 55%) !important;
-    animation: skeletonify-shimmer var(--skeletonify-duration) infinite linear !important;
-    animation-delay: var(--skeletonify-delay, 0s) !important;
+/* Solid blocks hide everything inside them. */
+:where(.skx-loading.skx-container:not(.skx-wrapper) *, .skx-loading.skx-container.skx-wrapper > * *, .skx-loading skx-unite > * *, .skx-loading [data-skeleton="unite"]:not(skx-unite) *) {
+    visibility: hidden !important;
 }
 
-/* Variant: WAVE */
-.skeletonify-animate.skeletonify-variant-wave :where(h1, h2, h3, h4, h5, h6, p, span, label, li, b, strong, i, u, em, button, input, textarea, .avatar, .icon, .line, .poster-placeholder, .thumbnail, div:empty, span:empty, img, svg, .movie-title, .movie-rating, .sk-circle, .sk-rect, .sk-pill),
-.skeletonify-animate.skeletonify-container-mode.skeletonify-variant-wave {
-    background-image: linear-gradient(110deg,
-            var(--skeletonify-base-color) 40%,
-            var(--skeletonify-highlight-color) 50%,
-            var(--skeletonify-base-color) 60%) !important;
-    animation: skeletonify-wave var(--skeletonify-duration) infinite linear !important;
-    animation-delay: var(--skeletonify-delay, 0s) !important;
-}
+/* ------------------------------------------------------------------ */
+/* 5. Modifiers                                                        */
+/* ------------------------------------------------------------------ */
 
-/* Variant: PULSE */
-.skeletonify-animate.skeletonify-variant-pulse :where(h1, h2, h3, h4, h5, h6, p, span, label, li, b, strong, i, u, em, button, input, textarea, .avatar, .icon, .line, .poster-placeholder, .thumbnail, div:empty, span:empty, img, svg, .movie-title, .movie-rating, .sk-circle, .sk-rect, .sk-pill),
-.skeletonify-animate.skeletonify-container-mode.skeletonify-variant-pulse {
-    animation: skeletonify-pulse var(--skeletonify-duration) infinite ease-in-out !important;
-    animation-delay: var(--skeletonify-delay, 0s) !important;
-}
-
-/* Variant: BLINK */
-.skeletonify-animate.skeletonify-variant-blink :where(h1, h2, h3, h4, h5, h6, p, span, label, li, b, strong, i, u, em, button, input, textarea, .avatar, .icon, .line, .poster-placeholder, .thumbnail, div:empty, span:empty, img, svg, .movie-title, .movie-rating, .sk-circle, .sk-rect, .sk-pill),
-.skeletonify-animate.skeletonify-container-mode.skeletonify-variant-blink {
-    animation: skeletonify-blink var(--skeletonify-duration) infinite ease-in-out !important;
-    animation-delay: var(--skeletonify-delay, 0s) !important;
-}
-
-/* 5. Keyframes */
-
-@keyframes skeletonify-shimmer {
-    0% {
-        background-position: 200% 0;
-    }
-
-    100% {
-        background-position: -200% 0;
-    }
-}
-
-@keyframes skeletonify-wave {
-    0% {
-        background-position: 200% 0;
-    }
-
-    100% {
-        background-position: -200% 0;
-    }
-}
-
-@keyframes skeletonify-pulse {
-
-    0%,
-    100% {
-        opacity: 1;
-    }
-
-    50% {
-        opacity: 0.6;
-    }
-}
-
-@keyframes skeletonify-blink {
-
-    0%,
-    100% {
-        opacity: 1;
-    }
-
-    50% {
-        opacity: 0.1;
-    }
-}
-
-/* Manual circle force - applies to the element itself and all descendants */
-.skeletonify-circle,
-.skeletonify-circle *:not(.not-skeleton) {
+:where(.skx-circle, .skx-circle *) {
     border-radius: 50% !important;
 }
 
-/* Manual exclusion utility */
-.skeletonify-loading .not-skeleton {
-    visibility: visible !important;
-    opacity: 1 !important;
+/* Random line widths: three deterministic widths cycled across lines. */
+:where(.skx-random, .skx-random *):where(p, h1, h2, h3, h4, h5, h6, li, .sk-line, [data-skeleton="line"], div:not(:has(> :not(br, wbr, b, i, u, s, strong, em, small, mark, sub, sup, code, kbd, abbr, time, q, cite, var, samp, del, ins)))) {
+    width: var(--skx-w1, 100%) !important;
+    max-width: 100% !important;
+}
+
+:where(.skx-random, .skx-random *):where(p, h1, h2, h3, h4, h5, h6, li, .sk-line, [data-skeleton="line"], div:not(:has(> :not(br, wbr, b, i, u, s, strong, em, small, mark, sub, sup, code, kbd, abbr, time, q, cite, var, samp, del, ins)))):nth-child(3n + 2) {
+    width: var(--skx-w2, 100%) !important;
+}
+
+:where(.skx-random, .skx-random *):where(p, h1, h2, h3, h4, h5, h6, li, .sk-line, [data-skeleton="line"], div:not(:has(> :not(br, wbr, b, i, u, s, strong, em, small, mark, sub, sup, code, kbd, abbr, time, q, cite, var, samp, del, ins)))):nth-child(3n) {
+    width: var(--skx-w3, 100%) !important;
+}
+
+/* ------------------------------------------------------------------ */
+/* 6. Fallback for browsers without :has() (Firefox < 121, Safari < 15.4) */
+/* ------------------------------------------------------------------ */
+
+@supports not selector(:has(*)) {
+    :where(.skx-loading, .skx-loading *):where(span, a, li, td, th, dd, b, strong, i, em, small, code, div:empty):not(:where(.skx-loading [data-skeleton="keep"], .skx-loading [data-skeleton="keep"] *, .skx-loading .not-skeleton, .skx-loading .not-skeleton *, .skx-loading [data-skeleton="ignore"] *, :where(.skx-loading, .skx-loading *):where(p, h1, h2, h3, h4, h5, h6, label, button, span, a) *)) {
+        background-color: var(--skx-_base) !important;
+        background-image: var(--skx-_image, none) !important;
+        background-size: 200% 100% !important;
+        background-repeat: no-repeat !important;
+        animation: var(--skx-_anim, none) !important;
+        animation-delay: var(--skx-delay, 0s) !important;
+        border-radius: var(--skx-_radius);
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/* 7. Keyframes                                                        */
+/* ------------------------------------------------------------------ */
+
+@keyframes skx-shimmer {
+    from {
+        background-position: 150% 0;
+    }
+
+    to {
+        background-position: -50% 0;
+    }
+}
+
+@keyframes skx-wave {
+    from {
+        background-position: -50% 0;
+    }
+
+    to {
+        background-position: 150% 0;
+    }
+}
+
+@keyframes skx-pulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+@keyframes skx-blink {
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.2;
+    }
 }

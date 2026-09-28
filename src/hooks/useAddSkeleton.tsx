@@ -11,7 +11,7 @@ import {
 import { HtmlTagGroup } from "../constants/tags";
 
 export interface AstSkeletonConfig {
-    className?: string; // e.g. "skeletonify-loading skeletonify-variant-shimmer ..."
+    className?: string; // e.g. "skx-loading skx-v-shimmer ..."
     style?: React.CSSProperties; // Global injected styles like random widths etc
     exceptTags?: string[];
     exceptTagGroups?: HtmlTagGroup[];
@@ -35,7 +35,7 @@ export default function useAddSkeleton(config: AstSkeletonConfig) {
         if (isSkeletonIgnoreComponent(elementType)) return null;
         if (isSkeletonUniteComponent(elementType)) {
             // Unite turns this entire element structure into one solid block
-            return createLeafNode(element, className + " skeletonify-container-mode", style);
+            return createLeafNode(element, className + " skx-container", style);
         }
 
         // --- 2. Exclusions ---
