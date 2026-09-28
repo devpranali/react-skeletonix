@@ -18,6 +18,9 @@ export default defineConfig({
         rollupOptions: {
             external: ['react', 'react-dom'],
             output: {
+                // Marks the bundle as a Client Component for React Server
+                // Components (Next.js App Router). Rollup drops source directives.
+                banner: "'use client';",
                 globals: {
                     react: 'React',
                     'react-dom': 'ReactDOM',
