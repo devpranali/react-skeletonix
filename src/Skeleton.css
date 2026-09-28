@@ -110,6 +110,7 @@
             var(--skeletonify-highlight-color) 40%,
             var(--skeletonify-base-color) 55%) !important;
     animation: skeletonify-shimmer var(--skeletonify-duration) infinite linear !important;
+    animation-delay: var(--skeletonify-delay, 0s) !important;
 }
 
 /* Variant: WAVE */
@@ -120,18 +121,21 @@
             var(--skeletonify-highlight-color) 50%,
             var(--skeletonify-base-color) 60%) !important;
     animation: skeletonify-wave var(--skeletonify-duration) infinite linear !important;
+    animation-delay: var(--skeletonify-delay, 0s) !important;
 }
 
 /* Variant: PULSE */
 .skeletonify-animate.skeletonify-variant-pulse :where(h1, h2, h3, h4, h5, h6, p, span, label, li, b, strong, i, u, em, button, input, textarea, .avatar, .icon, .line, .poster-placeholder, .thumbnail, div:empty, span:empty, img, svg, .movie-title, .movie-rating, .sk-circle, .sk-rect, .sk-pill),
 .skeletonify-animate.skeletonify-container-mode.skeletonify-variant-pulse {
     animation: skeletonify-pulse var(--skeletonify-duration) infinite ease-in-out !important;
+    animation-delay: var(--skeletonify-delay, 0s) !important;
 }
 
 /* Variant: BLINK */
 .skeletonify-animate.skeletonify-variant-blink :where(h1, h2, h3, h4, h5, h6, p, span, label, li, b, strong, i, u, em, button, input, textarea, .avatar, .icon, .line, .poster-placeholder, .thumbnail, div:empty, span:empty, img, svg, .movie-title, .movie-rating, .sk-circle, .sk-rect, .sk-pill),
 .skeletonify-animate.skeletonify-container-mode.skeletonify-variant-blink {
     animation: skeletonify-blink var(--skeletonify-duration) infinite ease-in-out !important;
+    animation-delay: var(--skeletonify-delay, 0s) !important;
 }
 
 /* 5. Keyframes */
