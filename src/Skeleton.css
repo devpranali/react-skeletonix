@@ -68,15 +68,23 @@ skx-unite {
 
 :where(.skx-loading, .skx-loading *):not(:where(.skx-loading [data-skeleton="keep"], .skx-loading [data-skeleton="keep"] *, .skx-loading .not-skeleton, .skx-loading .not-skeleton *)) {
     text-shadow: none !important;
-    border-color: transparent !important;
     outline-color: transparent !important;
-    background-color: transparent !important;
-    background-image: none !important;
-    box-shadow: none !important;
     caret-color: transparent !important;
     text-decoration-color: transparent !important;
     user-select: none !important;
     pointer-events: none !important;
+}
+
+/* Card/panel surfaces. surfaces="outlined" keeps the borders of containers,
+   surfaces="visible" also keeps their backgrounds and shadows. */
+:where(.skx-loading, .skx-loading *):not(:where(.skx-loading [data-skeleton="keep"], .skx-loading [data-skeleton="keep"] *, .skx-loading .not-skeleton, .skx-loading .not-skeleton *)):not(:where(:where(.skx-surfaces-outlined, .skx-surfaces-outlined *, .skx-surfaces-visible, .skx-surfaces-visible *):not([data-skx], [data-skx] *))) {
+    border-color: transparent !important;
+}
+
+:where(.skx-loading, .skx-loading *):not(:where(.skx-loading [data-skeleton="keep"], .skx-loading [data-skeleton="keep"] *, .skx-loading .not-skeleton, .skx-loading .not-skeleton *)):not(:where(:where(.skx-surfaces-visible, .skx-surfaces-visible *):not([data-skx], [data-skx] *))) {
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
 }
 
 /* Text colour is inherited, so ancestors of kept content keep theirs
@@ -117,6 +125,7 @@ video.skx-loading:not(:where(.skx-loading [data-skeleton="keep"], .skx-loading [
 [data-skx="f"],
 [data-skx="e"],
 [data-skx="b"],
+[data-skx="i"],
 :where(.skx-loading.skx-container:not(.skx-wrapper), .skx-loading.skx-container.skx-wrapper > *, .skx-loading skx-unite > *, .skx-loading [data-skeleton="unite"]:not(skx-unite)) {
     background-color: var(--skx-_base) !important;
     background-image: var(--skx-_image, none) !important;
@@ -125,7 +134,7 @@ video.skx-loading:not(:where(.skx-loading [data-skeleton="keep"], .skx-loading [
 }
 
 /* Animation is only declared while animating (cheaper static skeletons). */
-:where([data-skx="t"], [data-skx="f"], [data-skx="e"], [data-skx="b"]):where(.skx-animate *),
+:where([data-skx="t"], [data-skx="f"], [data-skx="e"], [data-skx="b"], [data-skx="i"]):where(.skx-animate *),
 :where(.skx-loading.skx-container:not(.skx-wrapper), .skx-loading.skx-container.skx-wrapper > *, .skx-loading skx-unite > *, .skx-loading [data-skeleton="unite"]:not(skx-unite)):where(.skx-animate, .skx-animate *) {
     animation: var(--skx-_anim, none) !important;
     animation-delay: var(--skx-delay, 0s) !important;
@@ -142,6 +151,12 @@ video.skx-loading:not(:where(.skx-loading [data-skeleton="keep"], .skx-loading [
     mask-origin: content-box;
 }
 
+/* Images without pixels (no src yet, or failed): no broken-image frame. */
+[data-skx="i"],
+img:is(:not([src]), [src=""]):where(.skx-loading:not([data-skx-ready]), .skx-loading:not([data-skx-ready]) *) {
+    content: url("data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7") !important;
+}
+
 /* Empty text still shows a line while its data is undefined. */
 [data-skx="f"]::after {
     content: "\a0\a0\a0\a0\a0\a0\a0\a0\a0\a0\a0\a0\a0\a0\a0\a0";
@@ -150,7 +165,7 @@ video.skx-loading:not(:where(.skx-loading [data-skeleton="keep"], .skx-loading [
 /* Canvas, frames and native controls draw over their background: cover
    them with an inset outline clipped to the box. */
 [data-skx="c"] {
-    outline: 100vmax solid var(--skx-_base) !important;
+    outline: calc(100vmax + 2px) solid var(--skx-_base) !important;
     outline-offset: -100vmax !important;
     clip-path: inset(0) !important;
     animation: var(--skx-_anim, none) !important;
@@ -193,7 +208,7 @@ video.skx-loading:not(:where(.skx-loading [data-skeleton="keep"], .skx-loading [
 }
 
 :where(.skx-loading:not([data-skx-ready]), .skx-loading:not([data-skx-ready]) *):where(input:is([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"]), progress, meter, canvas, iframe, embed, object, audio, video):not(:where(.skx-loading [data-skeleton="keep"], .skx-loading [data-skeleton="keep"] *, .skx-loading .not-skeleton, .skx-loading .not-skeleton *, .skx-loading [data-skeleton="ignore"] *, :where(.skx-loading, .skx-loading *):where(p, h1, h2, h3, h4, h5, h6, label, figcaption, legend, caption, summary, dt, .sk-line, [data-skeleton="line"], button, select, textarea, svg, .sk-block, .sk-circle, .sk-rect, .sk-pill, [data-skeleton="block"]) *, :where(.skx-loading, .skx-loading *):not(:has(> :not(br, wbr, b, i, u, s, strong, em, small, mark, sub, sup, code, kbd, abbr, time, q, cite, var, samp, del, ins))) > *, .skx-loading.skx-container:not(.skx-wrapper) *, .skx-loading.skx-container.skx-wrapper > * *, .skx-loading skx-unite > * *, .skx-loading [data-skeleton="unite"]:not(skx-unite) *)) {
-    outline: 100vmax solid var(--skx-_base) !important;
+    outline: calc(100vmax + 2px) solid var(--skx-_base) !important;
     outline-offset: -100vmax !important;
     clip-path: inset(0) !important;
     animation: var(--skx-_anim, none) !important;

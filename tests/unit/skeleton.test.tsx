@@ -328,7 +328,7 @@ describe('complex UI', () => {
             </Skeleton>
         );
         const kind = (sel: string) => $(sel)!.getAttribute('data-skx');
-        expect(kind('img')).toBe('b');
+        expect(kind('img')).toBe('i'); // no src yet: empty image block
         expect(kind('h3')).toBe('f');
         expect(kind('.mixed')).toBe('t');
         expect(kind('.text')).toBe('t');
@@ -342,6 +342,19 @@ describe('complex UI', () => {
 
         render(<Skeleton loading={false}><div className="card"><img alt="" /></div></Skeleton>);
         expect($$('[data-skx], [data-skx-ready]')).toHaveLength(0);
+    });
+
+    it('surfaces adds its mode class (also from a theme)', () => {
+        render(
+            <>
+                <Skeleton loading surfaces="outlined"><div className="a">x</div></Skeleton>
+                <SkeletonTheme surfaces="visible"><Skeleton loading><div className="b">y</div></Skeleton></SkeletonTheme>
+                <Skeleton loading><div className="c">z</div></Skeleton>
+            </>
+        );
+        expect($('.a')!.classList.contains('skx-surfaces-outlined')).toBe(true);
+        expect($('.b')!.classList.contains('skx-surfaces-visible')).toBe(true);
+        expect($('.c')!.className).not.toContain('skx-surfaces');
     });
 
     it('fillEmpty={false} does not fill empty text', () => {

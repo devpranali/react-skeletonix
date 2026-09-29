@@ -5,7 +5,7 @@ import { flushSync } from 'react-dom';
 import * as Lib from 'react-skeletonix';
 
 const Skeleton: any = (Lib as any).default;
-const { SkeletonScope, useSkeleton, SkeletonKeep } = Lib as any;
+const { SkeletonScope, useSkeleton, SkeletonKeep, SkeletonTheme } = Lib as any;
 const BASE = 'rgb(240, 240, 240)';
 const T = 'rgba(0, 0, 0, 0)';
 const results: string[] = [];
@@ -65,7 +65,18 @@ function App() {
                     <div id="stretched" style={{ width: 300 }}>Stretched name next to a tall avatar</div>
                 </div>
             </Skeleton>
+            {(['hidden', 'outlined', 'visible'] as const).map((mode) => (
+                <Skeleton key={mode} loading={loading} surfaces={mode}>
+                    <div id={`card-${mode}`} style={{ background: 'rgb(0, 0, 128)', border: '2px solid rgb(255, 0, 0)', boxShadow: '0 2px 6px rgb(0, 0, 0)', padding: 12 }}>
+                        <p id={`card-${mode}-p`}>Card title</p>
+                        <button id={`card-${mode}-btn`} style={{ border: '2px solid rgb(0, 255, 0)' }}>Action</button>
+                    </div>
+                </Skeleton>
+            ))}
+            <SkeletonTheme surfaces="visible"><Skeleton loading={loading}><div id="card-theme" style={{ background: 'rgb(0, 0, 128)' }}><p>Themed</p></div></Skeleton></SkeletonTheme>
             <Skeleton loading={loading}><table><tbody><tr><td id="padded-td" style={{ padding: 16 }}>Padded cell</td></tr></tbody></table></Skeleton>
+            <Skeleton loading={loading}><div><img id="nosrc" alt="" style={{ width: 40, height: 40, borderRadius: '50%' }} /><img id="broken" alt="broken" src="does-not-exist.png" style={{ width: 40, height: 40 }} /></div></Skeleton>
+            <Skeleton loading={loading}><div><label id="lbl-switch" style={{ display: 'flex', justifyContent: 'space-between' }}><span>Notifications</span><span id="sw" className="sk-pill" style={{ display: 'inline-block', width: 44, height: 24 }}><input type="checkbox" style={{ position: 'absolute', opacity: 0 }} /></span></label></div></Skeleton>
             <Skeleton loading={loading}><div className="user"><div id="empty-div"></div><span id="empty-span"></span><div id="sized-div" style={{ width: 30, height: 30 }} /></div></Skeleton>
             <Skeleton loading={loading}><div><button id="btn"><Icon id="btn-icon" /> 12</button></div></Skeleton>
             <Skeleton loading={loading}><div><div id="emoji">🎬 Movies</div></div></Skeleton>
@@ -137,6 +148,15 @@ setTimeout(() => {
     check('wide stretched text stays a text line', el('stretched').dataset.skx === 't');
     check('padded table cell stays a text line', el('padded-td').dataset.skx === 't');
     check('multi-line paragraph stays text lines', el('multi').dataset.skx === 't');
+    check('surfaces="hidden": card background and border hidden', cs('card-hidden').backgroundColor === T && cs('card-hidden').borderTopColor === T);
+    check('surfaces="outlined": card border kept, background hidden', cs('card-outlined').borderTopColor === 'rgb(255, 0, 0)' && cs('card-outlined').backgroundColor === T && cs('card-outlined').boxShadow === 'none');
+    check('surfaces="visible": card background, border and shadow kept', cs('card-visible').backgroundColor === 'rgb(0, 0, 128)' && cs('card-visible').borderTopColor === 'rgb(255, 0, 0)' && cs('card-visible').boxShadow !== 'none');
+    check('surfaces: content inside is still a skeleton', painted('card-visible-p') && painted('card-outlined-p') && cs('card-visible-p').color === T);
+    check('surfaces: painted blocks lose their own border', painted('card-visible-btn') && cs('card-visible-btn').borderTopColor === T && cs('card-outlined-btn').borderTopColor === T);
+    check('surfaces works through SkeletonTheme', cs('card-theme').backgroundColor === 'rgb(0, 0, 128)');
+    check('image without src: block without broken frame', el('nosrc').dataset.skx === 'i' && cs('nosrc').content.includes('url(') && painted('nosrc'));
+    check('image that failed to load: block without broken icon', el('broken').dataset.skx === 'i' && cs('broken').content.includes('url('), String(el('broken').dataset.skx));
+    check('label containing a switch shape is not one text block', el('lbl-switch').dataset.skx !== 't' && el('sw').dataset.skx === 'b');
     check('empty div (missing data) shows a line', el('empty-div').dataset.skx === 'f' && el('empty-div').getBoundingClientRect().height > 10);
     check('empty span (missing data) shows a line', el('empty-span').dataset.skx === 'f' && el('empty-span').getBoundingClientRect().width > 20);
     check('sized empty div stays a placeholder block', el('sized-div').dataset.skx === 'e' && painted('sized-div'));

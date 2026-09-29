@@ -18,6 +18,7 @@ import './Skeleton.css';
 
 export type SkeletonVariant = 'shimmer' | 'pulse' | 'wave' | 'blink' | 'none';
 export type SkeletonColorScheme = 'light' | 'dark' | 'auto';
+export type SkeletonSurfaces = 'hidden' | 'outlined' | 'visible';
 
 /** Options shared by <Skeleton> and <SkeletonTheme>. */
 export interface SkeletonOptions {
@@ -37,6 +38,12 @@ export interface SkeletonOptions {
     borderRadius?: string | number;
     /** Default colours for light or dark UIs; `'auto'` follows the OS. Default `'light'`. */
     colorScheme?: SkeletonColorScheme;
+    /**
+     * Cards, panels and other containers while loading: `'hidden'` (default)
+     * shows only the content blocks, `'outlined'` keeps their borders,
+     * `'visible'` keeps their background, border and shadow.
+     */
+    surfaces?: SkeletonSurfaces;
     /** Render every block as a circle. */
     circle?: boolean;
     /** Render each wrapped element as one solid block. */
@@ -103,6 +110,7 @@ const DEFAULTS = {
     animate: true,
     variant: 'shimmer' as SkeletonVariant,
     colorScheme: 'light' as SkeletonColorScheme,
+    surfaces: 'hidden' as SkeletonSurfaces,
     showWrapper: true,
     fillEmpty: true,
     stagger: true as boolean | number,
@@ -142,6 +150,7 @@ const SkeletonInternal = <T,>(
         highlightColor,
         borderRadius,
         colorScheme,
+        surfaces,
         circle,
         container,
         randomWidth,
@@ -178,6 +187,7 @@ const SkeletonInternal = <T,>(
         container && 'skx-container',
         randomWidth && 'skx-random',
         colorScheme !== 'light' && `skx-scheme-${colorScheme}`,
+        surfaces !== 'hidden' && `skx-surfaces-${surfaces}`,
         !fillEmpty && 'skx-no-fill'
     );
     const classFor = (i: number) => cx(baseClass, animates(i) && 'skx-animate');

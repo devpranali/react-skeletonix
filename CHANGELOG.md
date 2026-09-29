@@ -1,6 +1,30 @@
 # Changelog
 
-## 1.1.0
+## 2.1.0 (2026-09-30)
+
+### Added
+- `surfaces` option (`'hidden' | 'outlined' | 'visible'`): keep the borders, or the whole background, border and shadow, of cards, columns and panels while their content is a skeleton. Works on `<Skeleton>` and `<SkeletonTheme>`. Default `'hidden'` keeps the 2.0 look.
+- `SkeletonSurfaces` type.
+
+Includes the 2.0.1 fixes below.
+
+## 2.0.1 (2026-09-30)
+
+### Fixed
+- Images with no `src` yet (`<img src={user?.avatar}>`) or that failed to load are drawn as clean blocks, without the browser's missing/broken-image frame or icon.
+- A label that contains a form field or an explicit shape (e.g. a switch marked `sk-pill`) is no longer drawn as one text block covering it.
+- The cover over video, canvas, iframes and native controls reaches past the element edge, so anti-aliased edge pixels never show what is underneath.
+
+## 2.0.0 (2026-09-30)
+
+Every 1.x prop and export still exists, but some output changed. See [Upgrading from 1.x](README.md#upgrading-from-1x).
+
+### Breaking changes
+- Loaded render-function items are no longer wrapped: the `className`, `style`, `id` and handlers passed to `<Skeleton>` only apply while loading.
+- CSS classes renamed from `skeletonify-*` to `skx-*` (the `--skeletonify-*` variables are still read).
+- Elements with the class `avatar`, `icon` or `line` no longer get special shapes; use `.sk-circle`, `.sk-block`, `.sk-line` or `data-skeleton`.
+- Loading content is `inert` (not focusable or clickable), including `SkeletonKeep` content.
+- The ES build is now `dist/react-skeletonix.js` (was `react-skeletonix.es.js`); `require()` now loads `dist/react-skeletonix.cjs` instead of the UMD file.
 
 ### Fixed
 - Skeletons now render when the child is a single element (e.g. `<h4>`), for text inside `div`/`a`/`td`/`span`, and for images (previously blank).

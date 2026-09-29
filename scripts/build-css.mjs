@@ -41,6 +41,16 @@ const KEEP = [
     '.skx-loading .not-skeleton *',
 ];
 const NOT_KEEP = `:not(:where(${j(KEEP)}))`;
+// Containers (elements that are not drawn as blocks) that keep their own
+// borders / backgrounds with the `surfaces` option.
+const CONTAINERS_OF = (...modes) => {
+    const roots = modes.flatMap((m) => [`.skx-surfaces-${m}`, `.skx-surfaces-${m} *`]);
+    // Wrapped in :where() so these rules keep zero specificity.
+    return `:where(:where(${j(roots)}):not([data-skx], [data-skx] *))`;
+};
+const KEEPS_BORDERS = CONTAINERS_OF('outlined', 'visible');
+const KEEPS_FILL = CONTAINERS_OF('visible');
+
 // Ancestors of kept content (set by JS) keep their text colour.
 const KEEP_PATH = '[data-skx-keep-path]';
 
@@ -101,14 +111,18 @@ const TEXT_BODY = `
     -webkit-mask-origin: content-box;
     mask-origin: content-box;`;
 
+// The outline reaches 2px past the box (clipped away), so anti-aliased
+// edge pixels never show the content underneath.
 const COVER = `
-    outline: 100vmax solid var(--skx-_base) !important;
+    outline: calc(100vmax + 2px) solid var(--skx-_base) !important;
     outline-offset: -100vmax !important;
     clip-path: inset(0) !important;
     animation: var(--skx-_anim, none) !important;
     animation-delay: var(--skx-delay, 0s) !important;`;
 
 const T = '[data-skx="t"]';
+// A transparent 1x1 GIF: replaces the missing/broken-image frame.
+const BLANK_IMAGE = 'url("data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7")';
 const F = '[data-skx="f"]';
 
 /* ---------------------------------------------------------------- css */
@@ -179,15 +193,21 @@ ${rule(['.skx-wrapper', 'skx-keep', 'skx-ignore', 'skx-unite'], `
 
 ${rule(`${IN}${NOT_KEEP}`, `
     text-shadow: none !important;
-    border-color: transparent !important;
     outline-color: transparent !important;
-    background-color: transparent !important;
-    background-image: none !important;
-    box-shadow: none !important;
     caret-color: transparent !important;
     text-decoration-color: transparent !important;
     user-select: none !important;
     pointer-events: none !important;`)}
+
+/* Card/panel surfaces. surfaces="outlined" keeps the borders of containers,
+   surfaces="visible" also keeps their backgrounds and shadows. */
+${rule(`${IN}${NOT_KEEP}:not(${KEEPS_BORDERS})`, `
+    border-color: transparent !important;`)}
+
+${rule(`${IN}${NOT_KEEP}:not(${KEEPS_FILL})`, `
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;`)}
 
 /* Text colour is inherited, so ancestors of kept content keep theirs
    (marked by JS; :has() only before hydration). */
@@ -214,14 +234,18 @@ ${rule(['.skx-loading img', '.skx-loading video', 'img.skx-loading', 'video.skx-
 
 /* ---- 2. Classified elements (client) ---- */
 
-${rule(['[data-skx="t"]', '[data-skx="f"]', '[data-skx="e"]', '[data-skx="b"]', `:where(${j(SOLID)})`], PAINT_STATIC)}
+${rule(['[data-skx="t"]', '[data-skx="f"]', '[data-skx="e"]', '[data-skx="b"]', '[data-skx="i"]', `:where(${j(SOLID)})`], PAINT_STATIC)}
 
 /* Animation is only declared while animating (cheaper static skeletons). */
-${rule([':where([data-skx="t"], [data-skx="f"], [data-skx="e"], [data-skx="b"]):where(.skx-animate *)', `:where(${j(SOLID)}):where(.skx-animate, .skx-animate *)`], ANIMATE)}
+${rule([':where([data-skx="t"], [data-skx="f"], [data-skx="e"], [data-skx="b"], [data-skx="i"]):where(.skx-animate *)', `:where(${j(SOLID)}):where(.skx-animate, .skx-animate *)`], ANIMATE)}
 
 /* Text: content box only, one bar per line (needs the lh unit; older
    browsers keep a single block). */
 ${rule([T, F], TEXT_BODY)}
+
+/* Images without pixels (no src yet, or failed): no broken-image frame. */
+${rule(['[data-skx="i"]', `img:is(:not([src]), [src=""])${FB}`], `
+    content: ${BLANK_IMAGE} !important;`)}
 
 /* Empty text still shows a line while its data is undefined. */
 ${rule(`${F}::after`, `
