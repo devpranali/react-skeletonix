@@ -1,6 +1,15 @@
 # Changelog
 
-## 1.1.0
+## 2.0.0 (2026-09-30)
+
+Every 1.x prop and export still exists, but some output changed. See [Upgrading from 1.x](README.md#upgrading-from-1x).
+
+### Breaking changes
+- Loaded render-function items are no longer wrapped: the `className`, `style`, `id` and handlers passed to `<Skeleton>` only apply while loading.
+- CSS classes renamed from `skeletonify-*` to `skx-*` (the `--skeletonify-*` variables are still read).
+- Elements with the class `avatar`, `icon` or `line` no longer get special shapes; use `.sk-circle`, `.sk-block`, `.sk-line` or `data-skeleton`.
+- Loading content is `inert` (not focusable or clickable), including `SkeletonKeep` content.
+- The ES build is now `dist/react-skeletonix.js` (was `react-skeletonix.es.js`); `require()` now loads `dist/react-skeletonix.cjs` instead of the UMD file.
 
 ### Fixed
 - Skeletons now render when the child is a single element (e.g. `<h4>`), for text inside `div`/`a`/`td`/`span`, and for images (previously blank).

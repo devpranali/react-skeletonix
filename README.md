@@ -16,6 +16,17 @@
 - ♿ **Accessible**: loading content is `inert` and `aria-busy`, and respects `prefers-reduced-motion`
 - ⚡ **Fast and small**: ~6 kB JS + ~2 kB CSS gzipped, zero dependencies, React 16.8 – 19, SSR / Next.js ready
 
+## What's new in 2.0
+
+- **Complex UIs**: one bar per line of text, empty fields still show a line, text next to form fields gets its own bar, and video, canvas and iframes become solid blocks
+- **Works on every component** (hooks, class components, `memo`, `forwardRef`) without `useAST`
+- **`useSkeleton()`** hook and **`SkeletonScope`** for portals
+- **`colorScheme`** (`light` / `dark` / `auto`), **`placeholderData`**, and `SkeletonTheme` accepts every option
+- **Accessible** (`inert`, `aria-busy`, reduced motion) and **`'use client'`** for the Next.js App Router
+- **ES, CommonJS and UMD builds** with types; React's JSX runtime is no longer bundled in
+
+2.0 has a few breaking changes; see [Upgrading from 1.x](#upgrading-from-1x). Full list in the [CHANGELOG](CHANGELOG.md).
+
 ## Installation
 
 ```bash
@@ -26,6 +37,14 @@ Import the stylesheet once, e.g. in `main.tsx` or your root layout:
 
 ```tsx
 import 'react-skeletonix/style.css';
+```
+
+CommonJS works too (`const { Skeleton } = require('react-skeletonix')`). For a plain `<script>` tag, use the UMD build: it needs the global `React` and exposes `window.ReactSkeletonix`.
+
+```html
+<link rel="stylesheet" href="https://unpkg.com/react-skeletonix@2/dist/style.css" />
+<script src="https://unpkg.com/react-skeletonix@2/dist/react-skeletonix.umd.js"></script>
+<!-- const { Skeleton } = ReactSkeletonix; -->
 ```
 
 ## Quick start
@@ -183,6 +202,23 @@ createPortal(<SkeletonScope><Menu /></SkeletonScope>, document.body);
 
 A ref is forwarded to the first skeleton root element.
 
+## TypeScript
+
+Types ship with the package. `<Skeleton<Movie>>` types the item passed to a render function (see [Lists](#lists-and-render-functions)). Exported types:
+
+```ts
+import type {
+  SkeletonProps,       // props of <Skeleton>
+  SkeletonOptions,     // options shared by <Skeleton> and <SkeletonTheme>
+  SkeletonThemeProps,
+  SkeletonVariant,     // 'shimmer' | 'pulse' | 'wave' | 'blink' | 'none'
+  SkeletonColorScheme, // 'light' | 'dark' | 'auto'
+  SkeletonState,       // return type of useSkeleton()
+  SkeletonScopeProps,
+  HtmlTagGroup,        // values for exceptTagGroups
+} from 'react-skeletonix';
+```
+
 ## Theming
 
 Set defaults for a whole app or section with `SkeletonTheme` (themes can be nested; props on `<Skeleton>` win):
@@ -241,23 +277,35 @@ All evergreen browsers. On the client, each element is classified once by a smal
 - Content kept with `SkeletonKeep` is visible but not interactive while loading (the skeleton is `inert`).
 - Shadow DOM content (web components) cannot be styled from outside.
 
-## Migrating from 1.0.x
+## Upgrading from 1.x
 
+Every 1.x prop and export still exists, so most apps only need to update the version. Check these points if you customised the output:
+
+**Breaking changes**
+- **Loaded render-function items are no longer wrapped.** In 1.x, each item got a wrapper `div` (or your element got extra props) with the `className`, `style`, `id` and handlers you passed to `<Skeleton>`, even after loading. Now the loaded items are rendered exactly as your render function returns them, and those props only apply while loading. Move the class or style into the render function if you need it afterwards.
+- **CSS class names changed** from `skeletonify-*` to `skx-*`. Custom CSS that targets the old classes must be updated. The old `--skeletonify-*` variables are still read as fallbacks.
+- **Generic classes are no longer styled.** 1.x gave any element with the class `avatar`, `icon` or `line` a special skeleton shape. Use `.sk-circle`, `.sk-block`, `.sk-line` or `data-skeleton="…"` instead (see [Controlling the output](#controlling-the-output)).
+- **Loading content is `inert`.** Nothing inside a loading skeleton can be focused or clicked, including content kept with `SkeletonKeep`.
+- **The ES build is now `dist/react-skeletonix.js`** (was `react-skeletonix.es.js`). This only matters if you loaded the file by path, e.g. from a CDN.
+
+**Other changes**
 - `useAST` is deprecated and does nothing: nested components are handled automatically in every mode, including components with hooks.
 - `SkeletonKeep`, `SkeletonIgnore`, `SkeletonUnite`, `exceptTags` and `exceptTagGroups` now work without `useAST`.
-- CSS classes and variables use the `skx-` prefix. The old `--skeletonify-*` variables are still read as fallbacks.
-- When loaded, children are rendered without a wrapper; `className`/`style` only apply while loading.
-- `data` is the loaded data. For dummy data while loading, use `placeholderData`.
+- `data` is the loaded data. For dummy data while loading, use `placeholderData` (render functions receive `null` while loading, as in 1.x).
+- Empty text elements now show a line while loading (`fillEmpty`, default `true`).
 - Import the stylesheet as `react-skeletonix/style.css` (the old `react-skeletonix/dist/style.css` path still works).
 
 ## Development
 
 ```bash
 npm install
-npm run check          # lint + typecheck + unit tests
-npm run test:browser   # stylesheet checks in headless Chrome
-npm run build
+npm run check                   # lint + typecheck + unit tests
+npm run build                   # regenerates src/Skeleton.css, then builds dist/
+npm run test:browser            # stylesheet checks in headless Chrome (against src)
+npm run test:browser -- --dist  # the same checks against the built dist/
 ```
+
+`src/Skeleton.css` is generated by `scripts/build-css.mjs` (`npm run css`). Edit the script, not the CSS file, or your changes are overwritten by the next build. The browser tests need Chrome; set `CHROME_PATH` if it is not found.
 
 ## License
 
