@@ -1,8 +1,8 @@
 import * as React from 'react';
-import useAddSkeleton from './hooks/useAddSkeleton';
 import useIntersection from './hooks/useIntersection';
 import { HtmlTagGroup } from './constants/tags';
 import { ANCHOR_ATTR, decorateAnchored } from './utils/anchors';
+import { markSubtrees, tagsSelector, validSelector } from './utils/marks';
 import {
     INERT_PROP,
     assignRef,
@@ -28,6 +28,7 @@ export interface SkeletonThemeProps {
     borderRadius?: string | number;
     animate?: boolean;
     variant?: SkeletonVariant;
+    /** @deprecated No longer needed: every mode now handles nested components. */
     useAST?: boolean;
 }
 
@@ -59,12 +60,16 @@ export interface SkeletonProps<T = any> extends Omit<React.HTMLAttributes<HTMLEl
     highlightColor?: string;
     borderRadius?: string | number;
     circle?: boolean;
+    /** Elements matching this selector are hidden (space is kept) while loading. */
     excludeSelector?: string;
     showWrapper?: boolean;
     randomWidth?: boolean | [number, number];
     container?: boolean;
+    /** @deprecated No longer needed: every mode now handles nested components. */
     useAST?: boolean;
+    /** Tags shown as-is (not masked) while loading, e.g. `['button']`. */
     exceptTags?: string[];
+    /** Tag groups shown as-is while loading, e.g. `['MEDIA_TAGS']`. */
     exceptTagGroups?: HtmlTagGroup[];
     lazy?: boolean;
     stagger?: boolean | number;
@@ -107,9 +112,9 @@ const SkeletonInternal = <T,>(
         showWrapper = true,
         randomWidth,
         container,
-        useAST = theme?.useAST ?? false,
-        exceptTags = [],
-        exceptTagGroups = [],
+        useAST,
+        exceptTags,
+        exceptTagGroups,
         lazy = false,
         stagger = true,
         className,
@@ -150,12 +155,9 @@ const SkeletonInternal = <T,>(
         return { ...baseVars, ...widthVars(randomWidth, i), '--skx-delay': `${+(step * i).toFixed(3)}s` };
     };
 
-    const addSkeleton = useAddSkeleton({
-        className: rootClass,
-        style: {},
-        exceptTags,
-        exceptTagGroups,
-    });
+    if (useAST !== undefined) warnUseAST();
+
+    const keepSelector = tagsSelector(exceptTags, exceptTagGroups);
 
     // Latest decoration for anchor mode (read inside the layout effect).
     const decorations = React.useRef<Record<number, { classes: string[]; vars: Record<string, string> }>>({});
@@ -190,6 +192,12 @@ const SkeletonInternal = <T,>(
             ));
         });
 
+        const allRoots = [...roots.current.values(), ...Array.from(anchorRoots.values()).flat()];
+        cleanups.push(markSubtrees(allRoots, [
+            [validSelector(excludeSelector), 'ignore'],
+            [validSelector(keepSelector), 'keep'],
+        ]));
+
         const first = (roots.current.get(0) ?? anchorRoots.get(0)?.[0] ?? null) as HTMLElement | null;
         firstRoot.current = first;
         assignRef(ref, first);
@@ -209,19 +217,14 @@ const SkeletonInternal = <T,>(
     }
 
     // ---- Loading ----
-    const excludeStyles = excludeSelector ? (
-        <style>{`.skx-loading ${excludeSelector} { visibility: hidden !important; }`}</style>
-    ) : null;
-
     const classTokens = cx(rootClass, className).split(' ');
     const items: React.ReactNode[] = [];
     decorations.current = {};
 
     for (let i = 0; i < copies; i++) {
-        let content: React.ReactNode = typeof children === 'function'
+        const content: React.ReactNode = typeof children === 'function'
             ? children(placeholderData ?? null, i)
             : children;
-        if (useAST) content = React.Children.map(content, (child) => addSkeleton(child));
 
         const vars = varsFor(i);
         const rootStyle = { ...vars, ...style } as React.CSSProperties;
@@ -264,13 +267,15 @@ const SkeletonInternal = <T,>(
         }
     }
 
-    return (
-        <>
-            {excludeStyles}
-            {items}
-        </>
-    );
+    return <>{items}</>;
 };
+
+let warnedUseAST = false;
+function warnUseAST() {
+    if (warnedUseAST) return;
+    warnedUseAST = true;
+    console.warn('[react-skeletonix] `useAST` is deprecated and has no effect: nested components are skeletonized automatically.');
+}
 
 /**
  * The Skeleton component with full generic type support.
