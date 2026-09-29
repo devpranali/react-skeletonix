@@ -1,6 +1,6 @@
 {
   "name": "react-skeletonix",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "Zero-config React skeleton loader. Wrap any component and react-skeletonix turns its real layout into an animated loading placeholder: text, images, buttons and nested components included. Shimmer, pulse, wave and blink animations.",
   "type": "module",
   "main": "./dist/react-skeletonix.cjs",

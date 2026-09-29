@@ -99,7 +99,25 @@ Pass a function as `children` to render a list. While loading it is called `coun
 | `img`, `svg`, `input`, `textarea`, `select`, `button` | A block of the same size and shape |
 | `video`, `canvas`, `iframe`, checkboxes, radios, sliders, colour/file inputs, `progress`, `meter` | A solid block covering the element (native controls hidden) |
 | Empty elements with a size (e.g. an avatar `div`, a toggle track) | A block; your `border-radius` is kept |
-| Layout containers (cards, rows, grids, tables) | Invisible background/border; layout unchanged |
+| Layout containers (cards, rows, grids, tables) | Invisible background/border; layout unchanged (see `surfaces`) |
+
+### Card surfaces
+
+By default only the content is drawn, and cards, columns and panels around it become invisible. Use `surfaces` to keep them:
+
+```tsx
+<Skeleton loading={loading} surfaces="visible">   {/* 'hidden' | 'outlined' | 'visible' */}
+  <KanbanBoard />
+</Skeleton>
+```
+
+| `surfaces` | Cards, panels and other containers while loading |
+| :--- | :--- |
+| `'hidden'` (default) | Invisible: only the content blocks show |
+| `'outlined'` | Borders kept, backgrounds and shadows hidden (a wireframe look) |
+| `'visible'` | Background, border and shadow kept; the content inside becomes the skeleton |
+
+Set it once for the whole app with `<SkeletonTheme surfaces="visible">`.
 
 ## Controlling the output
 
@@ -190,6 +208,7 @@ createPortal(<SkeletonScope><Menu /></SkeletonScope>, document.body);
 | `baseColor` | `string` | `#f0f0f0` | Block colour. |
 | `highlightColor` | `string` | `#fcfcfc` | Shimmer/wave highlight colour. |
 | `colorScheme` | `'light' \| 'dark' \| 'auto'` | `'light'` | Default colours; `auto` follows the OS. |
+| `surfaces` | `'hidden' \| 'outlined' \| 'visible'` | `'hidden'` | Keep the borders (`outlined`) or the whole surface (`visible`) of cards and panels. See [Card surfaces](#card-surfaces). |
 | `borderRadius` | `number \| string` | `4px` | Radius of text lines. |
 | `circle` | `boolean` | `false` | Render every block as a circle. |
 | `container` | `boolean` | `false` | Render each wrapped element as one solid block. |
@@ -213,6 +232,7 @@ import type {
   SkeletonThemeProps,
   SkeletonVariant,     // 'shimmer' | 'pulse' | 'wave' | 'blink' | 'none'
   SkeletonColorScheme, // 'light' | 'dark' | 'auto'
+  SkeletonSurfaces,    // 'hidden' | 'outlined' | 'visible'
   SkeletonState,       // return type of useSkeleton()
   SkeletonScopeProps,
   HtmlTagGroup,        // values for exceptTagGroups

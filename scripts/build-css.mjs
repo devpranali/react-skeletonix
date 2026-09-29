@@ -41,6 +41,16 @@ const KEEP = [
     '.skx-loading .not-skeleton *',
 ];
 const NOT_KEEP = `:not(:where(${j(KEEP)}))`;
+// Containers (elements that are not drawn as blocks) that keep their own
+// borders / backgrounds with the `surfaces` option.
+const CONTAINERS_OF = (...modes) => {
+    const roots = modes.flatMap((m) => [`.skx-surfaces-${m}`, `.skx-surfaces-${m} *`]);
+    // Wrapped in :where() so these rules keep zero specificity.
+    return `:where(:where(${j(roots)}):not([data-skx], [data-skx] *))`;
+};
+const KEEPS_BORDERS = CONTAINERS_OF('outlined', 'visible');
+const KEEPS_FILL = CONTAINERS_OF('visible');
+
 // Ancestors of kept content (set by JS) keep their text colour.
 const KEEP_PATH = '[data-skx-keep-path]';
 
@@ -183,15 +193,21 @@ ${rule(['.skx-wrapper', 'skx-keep', 'skx-ignore', 'skx-unite'], `
 
 ${rule(`${IN}${NOT_KEEP}`, `
     text-shadow: none !important;
-    border-color: transparent !important;
     outline-color: transparent !important;
-    background-color: transparent !important;
-    background-image: none !important;
-    box-shadow: none !important;
     caret-color: transparent !important;
     text-decoration-color: transparent !important;
     user-select: none !important;
     pointer-events: none !important;`)}
+
+/* Card/panel surfaces. surfaces="outlined" keeps the borders of containers,
+   surfaces="visible" also keeps their backgrounds and shadows. */
+${rule(`${IN}${NOT_KEEP}:not(${KEEPS_BORDERS})`, `
+    border-color: transparent !important;`)}
+
+${rule(`${IN}${NOT_KEEP}:not(${KEEPS_FILL})`, `
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;`)}
 
 /* Text colour is inherited, so ancestors of kept content keep theirs
    (marked by JS; :has() only before hydration). */

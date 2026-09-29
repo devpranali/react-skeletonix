@@ -10,6 +10,7 @@ export type {
     SkeletonThemeProps,
     SkeletonVariant,
     SkeletonColorScheme,
+    SkeletonSurfaces,
 } from './Skeleton';
 export type { SkeletonState, SkeletonScopeProps } from './context';
 export type { HtmlTagGroup } from './constants/tags';

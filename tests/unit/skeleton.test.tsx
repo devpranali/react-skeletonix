@@ -344,6 +344,19 @@ describe('complex UI', () => {
         expect($$('[data-skx], [data-skx-ready]')).toHaveLength(0);
     });
 
+    it('surfaces adds its mode class (also from a theme)', () => {
+        render(
+            <>
+                <Skeleton loading surfaces="outlined"><div className="a">x</div></Skeleton>
+                <SkeletonTheme surfaces="visible"><Skeleton loading><div className="b">y</div></Skeleton></SkeletonTheme>
+                <Skeleton loading><div className="c">z</div></Skeleton>
+            </>
+        );
+        expect($('.a')!.classList.contains('skx-surfaces-outlined')).toBe(true);
+        expect($('.b')!.classList.contains('skx-surfaces-visible')).toBe(true);
+        expect($('.c')!.className).not.toContain('skx-surfaces');
+    });
+
     it('fillEmpty={false} does not fill empty text', () => {
         render(<Skeleton loading fillEmpty={false}><div><h3 /></div></Skeleton>);
         expect($('h3')!.getAttribute('data-skx')).toBe('t');

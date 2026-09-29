@@ -68,15 +68,23 @@ skx-unite {
 
 :where(.skx-loading, .skx-loading *):not(:where(.skx-loading [data-skeleton="keep"], .skx-loading [data-skeleton="keep"] *, .skx-loading .not-skeleton, .skx-loading .not-skeleton *)) {
     text-shadow: none !important;
-    border-color: transparent !important;
     outline-color: transparent !important;
-    background-color: transparent !important;
-    background-image: none !important;
-    box-shadow: none !important;
     caret-color: transparent !important;
     text-decoration-color: transparent !important;
     user-select: none !important;
     pointer-events: none !important;
+}
+
+/* Card/panel surfaces. surfaces="outlined" keeps the borders of containers,
+   surfaces="visible" also keeps their backgrounds and shadows. */
+:where(.skx-loading, .skx-loading *):not(:where(.skx-loading [data-skeleton="keep"], .skx-loading [data-skeleton="keep"] *, .skx-loading .not-skeleton, .skx-loading .not-skeleton *)):not(:where(:where(.skx-surfaces-outlined, .skx-surfaces-outlined *, .skx-surfaces-visible, .skx-surfaces-visible *):not([data-skx], [data-skx] *))) {
+    border-color: transparent !important;
+}
+
+:where(.skx-loading, .skx-loading *):not(:where(.skx-loading [data-skeleton="keep"], .skx-loading [data-skeleton="keep"] *, .skx-loading .not-skeleton, .skx-loading .not-skeleton *)):not(:where(:where(.skx-surfaces-visible, .skx-surfaces-visible *):not([data-skx], [data-skx] *))) {
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
 }
 
 /* Text colour is inherited, so ancestors of kept content keep theirs

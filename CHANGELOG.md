@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.1.0 (2026-09-30)
+
+### Added
+- `surfaces` option (`'hidden' | 'outlined' | 'visible'`): keep the borders, or the whole background, border and shadow, of cards, columns and panels while their content is a skeleton. Works on `<Skeleton>` and `<SkeletonTheme>`. Default `'hidden'` keeps the 2.0 look.
+- `SkeletonSurfaces` type.
+
+Includes the 2.0.1 fixes below.
+
 ## 2.0.1 (2026-09-30)
 
 ### Fixed
