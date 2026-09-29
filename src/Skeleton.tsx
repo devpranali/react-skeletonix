@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { HtmlTagGroup } from './constants/tags';
 import { ANCHOR_ATTR, decorateAnchored } from './utils/anchors';
-import { markSubtrees, tagsSelector, validSelector } from './utils/marks';
+import { SkeletonStateContext } from './context';
+import { decorateSubtrees, tagsSelector, validSelector } from './utils/marks';
 import {
     INERT_PROP,
     assignRef,
@@ -42,6 +43,8 @@ export interface SkeletonOptions {
     container?: boolean;
     /** Vary the width of text lines, optionally within `[min, max]` percent. */
     randomWidth?: boolean | [number, number];
+    /** Show a line for empty text elements (e.g. `<h3>{user?.name}</h3>` before data arrives). Default `true`. */
+    fillEmpty?: boolean;
     /** Wrap non-element children in a `display: contents` div. Default `true`. */
     showWrapper?: boolean;
     /** Delay between copies in seconds (`true` = 0.1s). Default `true`. */
@@ -101,6 +104,7 @@ const DEFAULTS = {
     variant: 'shimmer' as SkeletonVariant,
     colorScheme: 'light' as SkeletonColorScheme,
     showWrapper: true,
+    fillEmpty: true,
     stagger: true as boolean | number,
     lazy: false,
 };
@@ -142,6 +146,7 @@ const SkeletonInternal = <T,>(
         container,
         randomWidth,
         showWrapper,
+        fillEmpty,
         stagger,
         lazy,
         excludeSelector,
@@ -160,18 +165,22 @@ const SkeletonInternal = <T,>(
     const anchors = React.useRef(new Map<number, Element>());
     const anchorRoots = React.useRef(new Map<number, Element[]>());
 
-    const [isVisible, setVisible] = React.useState(!lazy);
-    const shouldAnimate = animate && (!lazy || isVisible);
+    // lazy: indexes of the copies currently in the viewport. Copies outside it
+    // are static, so long lists only pay for the animations on screen.
+    const [inView, setInView] = React.useState<ReadonlySet<number>>(NO_COPIES);
+    const [noObserver, setNoObserver] = React.useState(false);
+    const animates = (i: number) => animate && (!lazy || noObserver || inView.has(i));
 
-    const rootClass = cx(
+    const baseClass = cx(
         'skx-loading',
-        shouldAnimate && 'skx-animate',
         `skx-v-${variant}`,
         circle && 'skx-circle',
         container && 'skx-container',
         randomWidth && 'skx-random',
-        colorScheme !== 'light' && `skx-scheme-${colorScheme}`
+        colorScheme !== 'light' && `skx-scheme-${colorScheme}`,
+        !fillEmpty && 'skx-no-fill'
     );
+    const classFor = (i: number) => cx(baseClass, animates(i) && 'skx-animate');
 
     const baseVars = React.useMemo(() => {
         const vars: Record<string, string> = {};
@@ -188,6 +197,14 @@ const SkeletonInternal = <T,>(
     };
 
     if (useAST !== undefined) warnUseAST();
+
+    // Exposed to useSkeleton() / <SkeletonScope>. A loaded skeleton inside a
+    // loading one passes the outer state through.
+    const parentState = React.useContext(SkeletonStateContext);
+    const state = React.useMemo(
+        () => (loading ? { loading: true, className: classFor(0), vars: baseVars } : parentState),
+        [loading, classFor(0), baseVars, parentState] // eslint-disable-line react-hooks/exhaustive-deps
+    );
 
     const keepSelector = tagsSelector(exceptTags, exceptTagGroups);
 
@@ -225,10 +242,10 @@ const SkeletonInternal = <T,>(
         });
 
         const allRoots = [...roots.current.values(), ...Array.from(anchorRoots.current.values()).flat()];
-        cleanups.push(markSubtrees(allRoots, [
+        cleanups.push(decorateSubtrees(allRoots, [
             [validSelector(excludeSelector), 'ignore'],
             [validSelector(keepSelector), 'keep'],
-        ]));
+        ], { fill: fillEmpty }));
 
         const first = (roots.current.get(0) ?? anchorRoots.current.get(0)?.[0] ?? null) as HTMLElement | null;
         assignRef(ref, first);
@@ -239,42 +256,50 @@ const SkeletonInternal = <T,>(
         };
     });
 
-    // lazy: animate only while at least one copy is in the viewport. Wrapper
-    // roots are display:contents (no box), so their children are observed.
+    // lazy: track which copies are in the viewport. Wrapper roots are
+    // display:contents (no box), so their children are observed.
     React.useEffect(() => {
         if (!lazy || !loading) return;
         if (typeof IntersectionObserver === 'undefined') {
-            setVisible(true);
+            setNoObserver(true);
             return;
         }
-        const targets: Element[] = [];
-        const add = (el: Element) => {
-            if (el.classList.contains('skx-wrapper') && el.children.length) targets.push(...Array.from(el.children));
-            else targets.push(el);
+        const copyOf = new Map<Element, number>();
+        const add = (el: Element, i: number) => {
+            if (el.classList.contains('skx-wrapper') && el.children.length) Array.from(el.children).forEach((c) => copyOf.set(c, i));
+            else copyOf.set(el, i);
         };
         roots.current.forEach(add);
-        anchorRoots.current.forEach((els) => els.forEach(add));
-        if (!targets.length) return;
+        anchorRoots.current.forEach((els, i) => els.forEach((el) => add(el, i)));
+        if (!copyOf.size) return;
 
-        const inView = new Set<Element>();
+        const visible = new Set<Element>();
         const observer = new IntersectionObserver((entries) => {
-            entries.forEach((e) => (e.isIntersecting ? inView.add(e.target) : inView.delete(e.target)));
-            setVisible(inView.size > 0);
-        }, { threshold: 0.1 });
-        targets.forEach((t) => observer.observe(t));
+            entries.forEach((e) => (e.isIntersecting ? visible.add(e.target) : visible.delete(e.target)));
+            const next = new Set<number>();
+            visible.forEach((el) => next.add(copyOf.get(el)!));
+            setInView((prev) => (prev.size === next.size && Array.from(next).every((i) => prev.has(i)) ? prev : next));
+        }, { threshold: 0.01 });
+        copyOf.forEach((_, el) => observer.observe(el));
         return () => observer.disconnect();
     }, [lazy, loading, copies, showWrapper]);
+
+    const provide = (content: React.ReactNode) => (
+        <SkeletonStateContext.Provider value={state}>{content}</SkeletonStateContext.Provider>
+    );
 
     // ---- Loaded: render the real content, untouched ----
     if (!loading) {
         if (typeof children === 'function') {
-            return <>{toArray(data).map((item, i) => withKey(children(item, i), i))}</>;
+            return provide(toArray(data).map((item, i) => withKey(children(item, i), i)));
         }
-        return <>{children}</>;
+        // Same key as the first loading copy, so a single element child is
+        // updated in place (not remounted) when loading ends.
+        if (isHostElement(children)) return provide([React.cloneElement(children, { key: 'skx-0' })]);
+        return provide(children);
     }
 
     // ---- Loading ----
-    const classTokens = cx(rootClass, className).split(' ');
     const items: React.ReactNode[] = [];
     decorations.current = {};
 
@@ -284,6 +309,7 @@ const SkeletonInternal = <T,>(
             : children;
 
         const vars = varsFor(i);
+        const rootClass = classFor(i);
         const rootStyle = { ...vars, ...style } as React.CSSProperties;
         // Extra HTML props (id, handlers, data-*) go on the first copy only.
         const extra = i === 0 ? restProps : {};
@@ -299,6 +325,20 @@ const SkeletonInternal = <T,>(
                 className: cx(content.props.className, rootClass, className),
                 style: { ...content.props.style, ...rootStyle },
             } as Record<string, unknown>));
+        } else if (typeof content === 'string' || typeof content === 'number') {
+            // Bare text: an inline root that is itself drawn as a text line.
+            items.push(
+                <span
+                    {...extra}
+                    {...a11y}
+                    key={`skx-${i}`}
+                    ref={rootRef(i) as React.Ref<HTMLSpanElement>}
+                    className={cx(rootClass, className)}
+                    style={rootStyle}
+                >
+                    {content}
+                </span>
+            );
         } else if (showWrapper || !React.isValidElement(content)) {
             items.push(
                 <div
@@ -313,7 +353,7 @@ const SkeletonInternal = <T,>(
                 </div>
             );
         } else {
-            decorations.current[i] = { classes: classTokens, vars };
+            decorations.current[i] = { classes: cx(rootClass, className).split(' '), vars };
             items.push(
                 <React.Fragment key={`skx-${i}`}>
                     <template {...{ [ANCHOR_ATTR]: 'start' }} ref={anchorRef(i) as React.Ref<HTMLTemplateElement>} />
@@ -324,8 +364,10 @@ const SkeletonInternal = <T,>(
         }
     }
 
-    return <>{items}</>;
+    return provide(items);
 };
+
+const NO_COPIES: ReadonlySet<number> = new Set();
 
 let warnedUseAST = false;
 function warnUseAST() {
@@ -338,7 +380,8 @@ function warnUseAST() {
  * The Skeleton component with full generic type support.
  */
 export const Skeleton = React.forwardRef(SkeletonInternal) as <T = any>(
-    props: SkeletonProps<T> & { ref?: React.ForwardedRef<HTMLElement> }
+    // HTMLDivElement refs from 1.0.x keep type-checking.
+    props: SkeletonProps<T> & { ref?: React.Ref<HTMLElement> | React.Ref<HTMLDivElement> }
 ) => React.ReactElement | null;
 
 (Skeleton as any).displayName = 'Skeleton';
