@@ -1,51 +1,68 @@
 {
   "name": "react-skeletonix",
-  "version": "1.0.2",
-  "description": "The smartest and most performant React skeleton loader. Automatically generates high-fidelity skeleton screens and loading placeholders from existing components with zero configuration. Supports shimmer, pulse, wave, and blink animations for superior UX.",
-  "main": "./dist/react-skeletonix.umd.js",
-  "module": "./dist/react-skeletonix.es.js",
+  "version": "1.1.0",
+  "description": "Zero-config React skeleton loader. Wrap any component and react-skeletonix turns its real layout into an animated loading placeholder: text, images, buttons and nested components included. Shimmer, pulse, wave and blink animations.",
+  "type": "module",
+  "main": "./dist/react-skeletonix.cjs",
+  "module": "./dist/react-skeletonix.js",
   "types": "./dist/index.d.ts",
+  "unpkg": "./dist/react-skeletonix.umd.js",
+  "jsdelivr": "./dist/react-skeletonix.umd.js",
+  "style": "./dist/style.css",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/react-skeletonix.es.js",
-      "require": "./dist/react-skeletonix.umd.js"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/react-skeletonix.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/react-skeletonix.cjs"
+      }
     },
+    "./style.css": "./dist/style.css",
     "./dist/style.css": "./dist/style.css",
-    "./style.css": "./dist/style.css"
+    "./package.json": "./package.json"
   },
+  "sideEffects": [
+    "**/*.css"
+  ],
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md"
   ],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
+    "css": "node scripts/build-css.mjs",
+    "build": "npm run css && vite build",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:browser": "node scripts/test-browser.mjs",
+    "check": "npm run lint && npm run typecheck && npm run test",
+    "prepublishOnly": "npm run check && npm run build"
   },
   "keywords": [
     "react",
     "skeleton",
+    "skeleton-loader",
+    "skeleton-screen",
+    "skeleton-ui",
+    "react-skeleton",
+    "react-skeleton-loader",
     "loading",
+    "loading-states",
+    "loader",
     "placeholder",
-    "ui",
-    "dynamic",
+    "content-placeholder",
+    "content-loader",
     "shimmer",
     "pulse",
     "auto-generated",
     "zero-config",
-    "content-loader",
     "typescript",
-    "ux",
-    "loading-states",
-    "skeletonix",
-    "skeleton-loader",
-    "skeleton-ui",
-    "react-skeleton-loader",
-    "skeleton-screen",
-    "react-loading-skeleton",
-    "content-placeholder",
-    "ghost-elements",
-    "ux-design"
+    "nextjs",
+    "skeletonix"
   ],
   "author": {
     "name": "Amit Kumar",
@@ -71,13 +88,20 @@
     "url": "https://github.com/devpranali/react-skeletonix/issues"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@vitejs/plugin-react": "^4.0.0",
+    "esbuild": "^0.25.12",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^16.5.0",
+    "jsdom": "^26.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "typescript": "^5.0.0",
-    "vite": "^4.4.0",
-    "vite-plugin-dts": "^3.0.0"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.71.0",
+    "vite": "^6.4.3",
+    "vite-plugin-dts": "^4.5.4",
+    "vitest": "^3.2.4"
   }
 }
