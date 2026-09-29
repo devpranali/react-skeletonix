@@ -1,8 +1,22 @@
-import React, { forwardRef, useMemo, createContext, useContext, useRef } from 'react';
+import * as React from 'react';
 import useAddSkeleton from './hooks/useAddSkeleton';
 import useIntersection from './hooks/useIntersection';
 import { HtmlTagGroup } from './constants/tags';
+import { ANCHOR_ATTR, decorateAnchored } from './utils/anchors';
+import {
+    INERT_PROP,
+    assignRef,
+    cx,
+    getElementRef,
+    isHostElement,
+    mergeRefs,
+    toArray,
+    useIsoLayoutEffect,
+    withKey,
+} from './utils/react';
 import './Skeleton.css';
+
+export type SkeletonVariant = 'shimmer' | 'pulse' | 'wave' | 'blink' | 'none';
 
 /**
  * Global Theme Configuration for all Skeletons
@@ -13,11 +27,11 @@ export interface SkeletonThemeProps {
     duration?: number;
     borderRadius?: string | number;
     animate?: boolean;
-    variant?: 'shimmer' | 'pulse' | 'wave' | 'blink' | 'none';
+    variant?: SkeletonVariant;
     useAST?: boolean;
 }
 
-const SkeletonThemeContext = createContext<SkeletonThemeProps | undefined>(undefined);
+const SkeletonThemeContext = React.createContext<SkeletonThemeProps | undefined>(undefined);
 
 export const SkeletonTheme: React.FC<SkeletonThemeProps & { children: React.ReactNode }> = ({ children, ...themeProps }) => {
     return (
@@ -27,14 +41,20 @@ export const SkeletonTheme: React.FC<SkeletonThemeProps & { children: React.Reac
     );
 };
 
-export interface SkeletonProps<T = any> extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children'> {
+export interface SkeletonProps<T = any> extends Omit<React.HTMLAttributes<HTMLElement>, 'children'> {
+    /** Shows the skeleton while `true`; renders the real children when `false`. */
     loading: boolean;
+    /** Content to mask, or a render function `(item, index) => node`. */
     children?: React.ReactNode | ((item: T | null, index: number) => React.ReactNode);
-    data?: T[];
+    /** Items passed to a render function once loading is done. A single item is also accepted. */
+    data?: T[] | T | null;
+    /** Item passed to a render function while loading (defaults to `null`). */
+    placeholderData?: T;
+    /** Number of skeleton copies to render while loading. */
     count?: number;
     duration?: number;
     animate?: boolean;
-    variant?: 'shimmer' | 'pulse' | 'wave' | 'blink' | 'none';
+    variant?: SkeletonVariant;
     baseColor?: string;
     highlightColor?: string;
     borderRadius?: string | number;
@@ -50,173 +70,204 @@ export interface SkeletonProps<T = any> extends Omit<React.HTMLAttributes<HTMLDi
     stagger?: boolean | number;
 }
 
+// Deterministic "random" widths: stable across re-renders and SSR/CSR.
+function widthVars(randomWidth: SkeletonProps['randomWidth'], index: number): Record<string, string> {
+    if (!randomWidth) return {};
+    const [min, max] = Array.isArray(randomWidth) ? randomWidth : [60, 100];
+    const pick = (n: number) => {
+        const x = Math.sin((index + 1) * 9301 + n * 49297) * 233280;
+        return `${Math.round(min + (x - Math.floor(x)) * (max - min))}%`;
+    };
+    return { '--skx-w1': pick(1), '--skx-w2': pick(2), '--skx-w3': pick(3) };
+}
+
 /**
  * Internal implementation of the Skeleton component
  */
 const SkeletonInternal = <T,>(
     props: SkeletonProps<T>,
-    ref: React.ForwardedRef<HTMLDivElement>
+    ref: React.ForwardedRef<HTMLElement>
 ) => {
-    const internalRef = useRef<HTMLDivElement>(null);
-    const combinedRef = (ref as any) || internalRef;
-    const theme = useContext(SkeletonThemeContext);
+    const theme = React.useContext(SkeletonThemeContext);
 
     const {
         loading,
         children,
         data,
+        placeholderData,
         count = 1,
-        duration = props.duration ?? theme?.duration,
-        animate = props.animate ?? theme?.animate ?? true,
-        variant = props.variant ?? theme?.variant ?? 'shimmer',
-        baseColor = props.baseColor ?? theme?.baseColor,
-        highlightColor = props.highlightColor ?? theme?.highlightColor,
-        borderRadius = props.borderRadius ?? theme?.borderRadius,
+        duration = theme?.duration,
+        animate = theme?.animate ?? true,
+        variant = theme?.variant ?? 'shimmer',
+        baseColor = theme?.baseColor,
+        highlightColor = theme?.highlightColor,
+        borderRadius = theme?.borderRadius,
         circle,
         excludeSelector,
         showWrapper = true,
         randomWidth,
         container,
-        useAST = props.useAST ?? theme?.useAST ?? false,
+        useAST = theme?.useAST ?? false,
         exceptTags = [],
         exceptTagGroups = [],
         lazy = false,
         stagger = true,
-        className = '',
+        className,
         style,
         ...restProps
     } = props;
 
-    const isVisible = useIntersection(combinedRef, { enabled: lazy, threshold: 0.1 });
+    const copies = loading ? Math.max(0, Math.floor(count)) : 0;
+
+    // Root elements of every skeleton copy, by index.
+    const roots = React.useRef(new Map<number, Element>());
+    const anchors = React.useRef(new Map<number, Element>());
+    const firstRoot = React.useRef<HTMLElement | null>(null);
+
+    const isVisible = useIntersection(firstRoot, { enabled: lazy, threshold: 0.1 });
     const shouldAnimate = animate && (!lazy || isVisible);
 
-    const customStyles = useMemo(() => {
-        const s: any = { ...style };
-        if (duration !== undefined) s['--skx-duration'] = `${duration}s`;
-        if (baseColor) s['--skx-base-color'] = baseColor;
-        if (highlightColor) s['--skx-highlight-color'] = highlightColor;
-        if (borderRadius !== undefined) s['--skx-border-radius'] = typeof borderRadius === 'number' ? `${borderRadius}px` : borderRadius;
-        return s as React.CSSProperties;
-    }, [duration, baseColor, highlightColor, borderRadius, style]);
+    const rootClass = cx(
+        'skx-loading',
+        shouldAnimate && 'skx-animate',
+        `skx-v-${variant}`,
+        circle && 'skx-circle',
+        container && 'skx-container',
+        randomWidth && 'skx-random'
+    );
 
-    // Deterministic "random" widths: stable across re-renders and SSR/CSR.
-    const getWidthStyle = (index = 0) => {
-        if (!randomWidth) return {};
-        const [min, max] = Array.isArray(randomWidth) ? randomWidth : [60, 100];
-        const pick = (n: number) => {
-            const x = Math.sin((index + 1) * 9301 + n * 49297) * 233280;
-            return Math.round(min + (x - Math.floor(x)) * (max - min));
-        };
-        return { '--skx-w1': `${pick(1)}%`, '--skx-w2': `${pick(2)}%`, '--skx-w3': `${pick(3)}%` } as React.CSSProperties;
+    const baseVars = React.useMemo(() => {
+        const vars: Record<string, string> = {};
+        if (duration !== undefined) vars['--skx-duration'] = `${duration}s`;
+        if (baseColor) vars['--skx-base-color'] = baseColor;
+        if (highlightColor) vars['--skx-highlight-color'] = highlightColor;
+        if (borderRadius !== undefined) vars['--skx-border-radius'] = typeof borderRadius === 'number' ? `${borderRadius}px` : borderRadius;
+        return vars;
+    }, [duration, baseColor, highlightColor, borderRadius]);
+
+    const varsFor = (i: number): Record<string, string> => {
+        const step = stagger === false ? 0 : typeof stagger === 'number' ? stagger : 0.1;
+        return { ...baseVars, ...widthVars(randomWidth, i), '--skx-delay': `${+(step * i).toFixed(3)}s` };
     };
 
-    if (!loading && !children) return null;
-
-    const excludeStyles = (loading && excludeSelector) ? (
-        <style>
-            {`.skx-loading ${excludeSelector} { visibility: hidden !important; }`}
-        </style>
-    ) : null;
-
     const addSkeleton = useAddSkeleton({
-        className: `skx-loading ${shouldAnimate ? 'skx-animate' : ''} skx-v-${variant} ${circle ? 'skx-circle' : ''} ${container ? 'skx-container' : ''} ${randomWidth ? 'skx-random' : ''}`,
-        style: { ...customStyles, ...getWidthStyle() },
+        className: rootClass,
+        style: {},
         exceptTags,
-        exceptTagGroups
+        exceptTagGroups,
     });
 
-    if (typeof children === 'function') {
-        const itemsToRender = loading
-            ? Array.from({ length: count }, (_, i) => children(null, i))
-            : (data || []).map((item, i) => children(item, i));
+    // Latest decoration for anchor mode (read inside the layout effect).
+    const decorations = React.useRef<Record<number, { classes: string[]; vars: Record<string, string> }>>({});
 
-        return (
-            <>
-                {loading && excludeStyles}
-                {itemsToRender.map((content, i) => {
-                    const finalContent = (loading && useAST && React.isValidElement(content))
-                        ? addSkeleton(content)
-                        : content;
+    // Stable per-index ref callbacks that register skeleton roots.
+    const refCache = React.useRef<Record<number, React.RefCallback<Element>>>({});
+    const rootRef = (i: number): React.RefCallback<Element> =>
+        (refCache.current[i] ??= (el: Element | null) => {
+            if (el) roots.current.set(i, el);
+            else roots.current.delete(i);
+        });
+    const anchorCache = React.useRef<Record<number, React.RefCallback<Element>>>({});
+    const anchorRef = (i: number): React.RefCallback<Element> =>
+        (anchorCache.current[i] ??= (el: Element | null) => {
+            if (el) anchors.current.set(i, el);
+            else anchors.current.delete(i);
+        });
 
-                    const staggeredDelay = (stagger && loading) ? (typeof stagger === 'number' ? stagger : 0.1) * i : 0;
-                    const skeletonClassName = `${className} ${!useAST && loading ? 'skx-loading' : ''} ${!useAST && loading && shouldAnimate ? 'skx-animate' : ''} ${!useAST && loading ? `skx-v-${variant}` : ''} ${!useAST && loading && circle ? 'skx-circle' : ''} ${!useAST && loading && container ? 'skx-container' : ''} ${!useAST && randomWidth ? 'skx-random' : ''}`.trim();
-                    const skeletonStyle = loading && !useAST
-                        ? { ...customStyles, ...getWidthStyle(i), '--skx-delay': `${staggeredDelay}s` } as React.CSSProperties
-                        : style;
+    // Runs after every commit: decorate anchor-mode roots and expose the first
+    // root through the forwarded ref.
+    useIsoLayoutEffect(() => {
+        const cleanups: Array<() => void> = [];
+        const anchorRoots = new Map<number, Element[]>();
 
-                    if (React.isValidElement(finalContent) && typeof finalContent.type === 'string') {
-                        const element = finalContent as React.ReactElement<any>;
-                        return React.cloneElement(element, {
-                            key: i,
-                            className: `${element.props.className || ''} ${skeletonClassName}`.trim(),
-                            style: { ...(element.props.style || {}), ...skeletonStyle },
-                            "aria-busy": loading ? "true" : "false",
-                            "aria-live": "polite",
-                            ...restProps
-                        } as any);
-                    }
+        anchors.current.forEach((start, i) => {
+            const deco = decorations.current[i];
+            if (!deco) return;
+            cleanups.push(decorateAnchored(
+                start,
+                { classes: deco.classes, vars: deco.vars, attrs: { 'aria-busy': 'true', inert: '' } },
+                (els) => anchorRoots.set(i, els)
+            ));
+        });
 
-                    return (
-                        <div
-                            key={i}
-                            className={`${showWrapper ? 'skx-wrapper' : ''} ${skeletonClassName}`.trim()}
-                            style={skeletonStyle}
-                            aria-busy={loading ? "true" : "false"}
-                            aria-live="polite"
-                            {...restProps}
-                        >
-                            {finalContent}
-                        </div>
-                    );
-                })}
-            </>
-        );
+        const first = (roots.current.get(0) ?? anchorRoots.get(0)?.[0] ?? null) as HTMLElement | null;
+        firstRoot.current = first;
+        assignRef(ref, first);
+
+        return () => {
+            cleanups.forEach((fn) => fn());
+            assignRef(ref, null);
+        };
+    });
+
+    // ---- Loaded: render the real content, untouched ----
+    if (!loading) {
+        if (typeof children === 'function') {
+            return <>{toArray(data).map((item, i) => withKey(children(item, i), i))}</>;
+        }
+        return <>{children}</>;
     }
 
-    if (!loading) return <>{children}</>;
+    // ---- Loading ----
+    const excludeStyles = excludeSelector ? (
+        <style>{`.skx-loading ${excludeSelector} { visibility: hidden !important; }`}</style>
+    ) : null;
 
-    const skeletonClassName = `${className} ${!useAST ? 'skx-loading' : ''} ${!useAST && shouldAnimate ? 'skx-animate' : ''} ${!useAST ? `skx-v-${variant}` : ''} ${!useAST && circle ? 'skx-circle' : ''} ${!useAST && container ? 'skx-container' : ''} ${!useAST && randomWidth ? 'skx-random' : ''}`.trim();
-    const skeletonStyle = !useAST ? customStyles : style;
+    const classTokens = cx(rootClass, className).split(' ');
+    const items: React.ReactNode[] = [];
+    decorations.current = {};
 
-    const skeletonItems = Array.from({ length: count }, (_, i) => {
-        const staggeredDelay = (stagger && loading) ? (typeof stagger === 'number' ? stagger : 0.1) * i : 0;
-        const currentStyle = { ...skeletonStyle, ...(!useAST ? getWidthStyle(i) : {}), '--skx-delay': `${staggeredDelay}s` } as React.CSSProperties;
-        const finalChildren = (loading && useAST)
-            ? React.Children.map(children, (child) => addSkeleton(child))
+    for (let i = 0; i < copies; i++) {
+        let content: React.ReactNode = typeof children === 'function'
+            ? children(placeholderData ?? null, i)
             : children;
+        if (useAST) content = React.Children.map(content, (child) => addSkeleton(child));
 
-        if (React.isValidElement(finalChildren) && typeof finalChildren.type === 'string') {
-            const element = finalChildren as React.ReactElement<any>;
-            return React.cloneElement(element, {
-                key: i,
-                ref: i === 0 ? combinedRef : undefined,
-                className: `${element.props.className || ''} ${skeletonClassName}`.trim(),
-                style: { ...(element.props.style || {}), ...currentStyle },
-                "aria-busy": "true",
-                "aria-live": "polite",
-                ...restProps
-            } as any);
+        const vars = varsFor(i);
+        const rootStyle = { ...vars, ...style } as React.CSSProperties;
+        // Extra HTML props (id, handlers, data-*) go on the first copy only.
+        const extra = i === 0 ? restProps : {};
+        const a11y = { 'aria-busy': true as const, ...INERT_PROP };
+
+        if (isHostElement(content)) {
+            const childRef = getElementRef(content);
+            items.push(React.cloneElement(content, {
+                ...extra,
+                ...a11y,
+                key: `skx-${i}`,
+                ref: childRef ? mergeRefs(childRef, rootRef(i)) : rootRef(i),
+                className: cx(content.props.className, rootClass, className),
+                style: { ...content.props.style, ...rootStyle },
+            } as Record<string, unknown>));
+        } else if (showWrapper || !React.isValidElement(content)) {
+            items.push(
+                <div
+                    {...extra}
+                    {...a11y}
+                    key={`skx-${i}`}
+                    ref={rootRef(i) as React.Ref<HTMLDivElement>}
+                    className={cx('skx-wrapper', rootClass, className)}
+                    style={rootStyle}
+                >
+                    {content}
+                </div>
+            );
+        } else {
+            decorations.current[i] = { classes: classTokens, vars };
+            items.push(
+                <React.Fragment key={`skx-${i}`}>
+                    <template {...{ [ANCHOR_ATTR]: 'start' }} ref={anchorRef(i) as React.Ref<HTMLTemplateElement>} />
+                    {content}
+                    <template {...{ [ANCHOR_ATTR]: 'end' }} />
+                </React.Fragment>
+            );
         }
-
-        return (
-            <div
-                key={i}
-                ref={i === 0 ? combinedRef : undefined}
-                className={`${showWrapper ? 'skx-wrapper' : ''} ${skeletonClassName}`.trim()}
-                style={currentStyle}
-                aria-busy="true"
-                aria-live="polite"
-                {...restProps}
-            >
-                {finalChildren}
-            </div>
-        );
-    });
+    }
 
     return (
         <>
             {excludeStyles}
-            {skeletonItems}
+            {items}
         </>
     );
 };
@@ -224,8 +275,8 @@ const SkeletonInternal = <T,>(
 /**
  * The Skeleton component with full generic type support.
  */
-export const Skeleton = forwardRef(SkeletonInternal) as <T = any>(
-    props: SkeletonProps<T> & { ref?: React.ForwardedRef<HTMLDivElement> }
+export const Skeleton = React.forwardRef(SkeletonInternal) as <T = any>(
+    props: SkeletonProps<T> & { ref?: React.ForwardedRef<HTMLElement> }
 ) => React.ReactElement | null;
 
 (Skeleton as any).displayName = 'Skeleton';

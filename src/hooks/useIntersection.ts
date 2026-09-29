@@ -5,7 +5,7 @@ interface UseIntersectionOptions extends IntersectionObserverInit {
 }
 
 export function useIntersection(
-    ref: RefObject<HTMLElement>,
+    ref: RefObject<HTMLElement | null>,
     options: UseIntersectionOptions = {}
 ) {
     const { enabled = true, ...observerOptions } = options;
