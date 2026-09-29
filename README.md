@@ -7,152 +7,215 @@
 
 **[👉 Full Documentation & Live Demo](https://doc.react-skeletonix.devpranali.com/)**
 
-**The smartest React skeleton loader.** Automatically generates high-fidelity, high-contrast loading states from your existing child components with **zero configuration**.
+**Wrap any component and get its skeleton automatically.** `react-skeletonix` masks your *real* UI while it loads: text becomes grey lines, images, buttons and inputs become blocks, and the layout stays exactly the same. No separate skeleton components to design or keep in sync.
 
-## Why react-skeletonix?
+- 🧠 **Automatic**: works on plain HTML, your own components, class components, `memo`, `forwardRef` and third-party components
+- 📐 **Layout-safe**: no size or display changes; wrappers are `display: contents`
+- 🎨 **Themeable**: shimmer, pulse, wave, blink or static; light/dark/auto colours; CSS variables
+- ♿ **Accessible**: loading content is `inert` and `aria-busy`, and respects `prefers-reduced-motion`
+- ⚡ **Tiny**: ~4 kB JS + ~1.5 kB CSS gzipped, zero dependencies, React 16.8 – 19, SSR / Next.js ready
 
-Unlike traditional skeleton libraries that require you to manually design a separate "skeleton version" of your UI, `react-skeletonix` traverses your actual component tree and automatically creates a geometric mask that perfectly matches your layout.
-
-- 🧠 **Automatic Shape Generation**: No more manual width/height definitions.
-- ⚡ **Zero Configuration**: Just wrap your component and it "just works".
-- 🎨 **Fully Customizable**: Adjust colors, duration, and animation variants (shimmer, pulse, wave).
-- 📦 **Ultra Lightweight**: Zero dependencies (only peer-react).
-- 🦾 **TypeScript First**: Full generic type support for `Skeleton<T>`.
-
-## installation
+## Installation
 
 ```bash
 npm install react-skeletonix
 ```
 
-## Quick Start (Smart Rendering)
+Import the stylesheet once, e.g. in `main.tsx` or your root layout:
 
-The most powerful way to use `react-skeletonix` is through **Function-as-Child (FaC)**. It allows you to define your UI once and let the library handle the injection of dummy data for a perfect "ghost" state.
+```tsx
+import 'react-skeletonix/style.css';
+```
 
-### Simple Example
+## Quick start
+
 ```tsx
 import Skeleton from 'react-skeletonix';
-import 'react-skeletonix/dist/style.css'; 
 
-function Profile({ loading, user }) {
+function ProfileCard({ loading, user }) {
   return (
-    <Skeleton loading={loading} data={{ name: 'Loading Name...', bio: 'Loading Bio...' }}>
-      {(item) => (
-        <div className="card">
-          <h2>{item?.name || user?.name}</h2>
-          <p>{item?.bio || user?.bio}</p>
-        </div>
-      )}
+    <Skeleton loading={loading}>
+      <div className="card">
+        <img className="avatar" src={user?.avatar} alt="" />
+        <h3>{user?.name ?? 'Placeholder name'}</h3>
+        <p>{user?.bio ?? 'A short placeholder bio that fills one line.'}</p>
+        <button>Follow</button>
+      </div>
     </Skeleton>
   );
 }
 ```
 
-## TypeScript Support
+While `loading` is `true` the card is rendered with its real layout, and every piece of content becomes a skeleton block. When `loading` is `false` the children are rendered untouched: no wrapper, no extra attributes.
 
-`react-skeletonix` is built with TypeScript and provides full generic support for the `data` prop and render functions.
+> **Tip:** placeholder text gives a line its width. An element with no text and no size has nothing to show, so give empty placeholders a size (`width`/`height`) or some placeholder text.
 
-### Defining Types
+## Lists and render functions
+
+Pass a function as `children` to render a list. While loading it is called `count` times with `placeholderData` (or `null`); afterwards it is called for each item of `data`.
+
 ```tsx
-interface User {
-  id: number;
-  name: string;
-  avatar: string;
-}
-
-// Pass the type to the Skeleton component
-<Skeleton<User> 
-  loading={loading} 
-  data={{ id: 0, name: 'John Doe', avatar: '' }}
->
-  {(item) => (
-    <div>{item?.name}</div> // item is properly typed as User | null
+<Skeleton<Movie> loading={loading} data={movies} count={6}>
+  {(movie) => (
+    <article className="movie-card">
+      <img src={movie?.poster} alt="" />
+      <h3>{movie?.title ?? 'Loading title'}</h3>
+      <span>{movie?.year ?? '2024'}</span>
+    </article>
   )}
 </Skeleton>
 ```
 
-## Animation Variants
+`data` also accepts a single object. Keys you set in the render function are kept.
 
-Customize the "feel" of your loading states with different built-in animation variants.
+## How blocks are chosen
 
-| Variant | Description |
+| Element | While loading |
 | :--- | :--- |
-| `shimmer` (Default) | A smooth light sweep across the element. |
-| `pulse` | Elements gently fade in and out. |
-| `wave` | A flowing wave effect from left to right. |
-| `blink` | A sharp on/off blinking animation. |
-| `none` | Static grey placeholders with no animation. |
+| Text: `p`, `h1`–`h6`, `label`, and any element that only contains text (e.g. `<div>John</div>`, `<a>`, `<td>`, `<span>`) | One rounded line block (padding is not painted) |
+| `img`, `video`, `svg`, `input`, `textarea`, `select`, `button`, `progress`, `meter` | A block of the same size and shape |
+| Empty elements with a size (e.g. an avatar `div`) | A block; your `border-radius` is kept |
+| Layout containers (cards, rows, grids) | Invisible background/border; layout unchanged |
+| `canvas`, `iframe`, `embed`, `object`, `audio` | Hidden (space kept) |
+
+## Controlling the output
 
 ```tsx
-<Skeleton loading={true} variant="pulse">
-  <MyComponent />
+import Skeleton, { SkeletonKeep, SkeletonIgnore, SkeletonUnite } from 'react-skeletonix';
+
+<Skeleton loading={loading}>
+  <div className="toolbar">
+    <SkeletonKeep><Logo /></SkeletonKeep>              {/* shown as-is */}
+    <SkeletonIgnore><Badge /></SkeletonIgnore>         {/* invisible, keeps its space */}
+    <SkeletonUnite><Chart /></SkeletonUnite>           {/* one solid block */}
+    <h2>Dashboard</h2>
+  </div>
 </Skeleton>
 ```
 
-## Advanced Examples
+The same works without components, on any element:
 
-### 1. Complex Data Mapping
-Simulate a list of complex objects with nested styling.
+| Attribute / class | Effect |
+| :--- | :--- |
+| `data-skeleton="keep"` or `.not-skeleton` | Shown as-is, including its children |
+| `data-skeleton="ignore"` | Hidden while loading, space kept |
+| `data-skeleton="unite"` | One solid block |
+| `data-skeleton="block"` / `.sk-block` | Force a block |
+| `data-skeleton="line"` / `.sk-line` | Force a text line |
+| `.sk-circle`, `.sk-pill`, `.sk-rect` | Force a shape |
 
-```tsx
-<div className="grid">
-  <Skeleton<Product> 
-    loading={loading} 
-    count={6} 
-    variant="shimmer"
-    data={[
-      { id: 1, title: 'Premium Wireless Headphones', price: '$299.00', image: '' },
-      { id: 2, title: 'Mechanical Gaming Keyboard', price: '$159.00', image: '' }
-    ]}
-  >
-    {(item) => (
-      <div className="product-card">
-        <div className="image-placeholder" style={{ height: '200px' }} />
-        <h3>{item?.title}</h3>
-        <span className="price">{item?.price}</span>
-        <button>Buy Now</button>
-      </div>
-    )}
-  </Skeleton>
-</div>
-```
-
-### 2. Using `showWrapper`
-By default, the `Skeleton` wraps children in a helper `div` to apply masking. In some CSS Grid or Flex layouts, this wrapper might break your styles. Set `showWrapper={false}` to apply the skeleton classes directly to the first child element.
+Or by selector, scoped to one skeleton (also applies inside child components):
 
 ```tsx
-<div className="flex-container">
-  <Skeleton loading={loading} showWrapper={false}>
-    <div className="flex-item">I am the direct child of the flex container</div>
-  </Skeleton>
-</div>
+<Skeleton loading={loading} exceptTags={['button']} excludeSelector=".badge">
+  <Toolbar />
+</Skeleton>
 ```
 
-## Props & Parameters Explanation
+## Props
 
-| Parameter | Type | Default | Description |
+| Prop | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| **`loading`** | `boolean` | **Required** | The main toggle. |
-| **`data`** | `T` | `undefined` | Used with Function-as-Child to inject template data. |
-| **`variant`** | `shimmer \| pulse \| wave \| blink \| none` | `shimmer` | The type of animation effect. |
-| **`showWrapper`** | `boolean` | `true` | Whether to wrap children in a technical `div`. Set to `false` for direct style application. |
-| **`count`** | `number` | `1` | Number of times to duplicate children while loading. |
-| **`baseColor`** | `string` | `#f0f0f0` | Background color of skeleton shapes. |
-| **`highlightColor`** | `string` | `#f8f8f8` | Color of the animated shimmer. |
-| **`duration`** | `number` | `1.5` | Speed of animation in seconds. |
-| **`circle`** | `boolean` | `false` | Forces circular shapes (100% border-radius). |
-| **`excludeSelector`** | `string` | `undefined` | CSS selector to skip specific children. |
+| **`loading`** | `boolean` | required | Show the skeleton (`true`) or the real content (`false`). |
+| `children` | `ReactNode \| (item, index) => ReactNode` | | Content to mask, or a render function. |
+| `data` | `T[] \| T` | | Items for the render function once loaded. |
+| `placeholderData` | `T` | `null` | Item passed to the render function while loading. |
+| `count` | `number` | `1` | Number of skeleton copies while loading. |
+| `variant` | `'shimmer' \| 'pulse' \| 'wave' \| 'blink' \| 'none'` | `'shimmer'` | Animation style. |
+| `animate` | `boolean` | `true` | `false` renders static blocks. |
+| `duration` | `number` | `1.5` | Animation length in seconds. |
+| `stagger` | `boolean \| number` | `true` | Delay between copies (`true` = `0.1`s). |
+| `lazy` | `boolean` | `false` | Only animate while in the viewport. |
+| `baseColor` | `string` | `#ebebeb` | Block colour. |
+| `highlightColor` | `string` | `#f5f5f5` | Shimmer/wave highlight colour. |
+| `colorScheme` | `'light' \| 'dark' \| 'auto'` | `'light'` | Default colours; `auto` follows the OS. |
+| `borderRadius` | `number \| string` | `4px` | Radius of text lines. |
+| `circle` | `boolean` | `false` | Render every block as a circle. |
+| `container` | `boolean` | `false` | Render each wrapped element as one solid block. |
+| `randomWidth` | `boolean \| [min, max]` | `false` | Vary text line widths (percent, stable between renders). |
+| `showWrapper` | `boolean` | `true` | See [Tables and lists](#tables-lists-and-selects). |
+| `exceptTags` | `string[]` | | Tags shown as-is, e.g. `['button']`. |
+| `exceptTagGroups` | `HtmlTagGroup[]` | | Groups shown as-is: `TEXT_TAGS`, `MEDIA_TAGS`, `FORM_TAGS`, `LIST_TAGS`, `TABLE_TAGS`, `STRUCTURE_TAGS`, `INTERACTIVE_TAGS`, `METADATA_TAGS`, `MISC_TAGS`. |
+| `excludeSelector` | `string` | | Elements hidden while loading (space kept). |
+| `className`, `style`, `id`, `on*`, … | | | Applied to the skeleton root while loading (first copy only for `id`/handlers). |
 
-## FAQ
+A ref is forwarded to the first skeleton root element.
 
-**Q: Do I need to specify the width and height of my skeletons?**  
-A: No! `react-skeletonix` automatically assumes the exact geometric bounds of the children you wrap.
+## Theming
 
-**Q: Why do I need to include the CSS file?**  
-A: The CSS file provides essential layout utilities and high-performance animations.
+Set defaults for a whole app or section with `SkeletonTheme` (themes can be nested; props on `<Skeleton>` win):
 
-## Performance notes
+```tsx
+import { SkeletonTheme } from 'react-skeletonix';
 
-- **No Layout Thrashing:** The real DOM layout is preserved and simply "masked".
-- **Hardware-Accelerated CSS:** Shimmer animations run solely via GPU-accelerated CSS.
-- **Granular is Better:** For extremely complex pages, wrap modular groups rather than the entire app.
+<SkeletonTheme colorScheme="auto" variant="wave" duration={2}>
+  <App />
+</SkeletonTheme>
+```
+
+`SkeletonTheme` accepts every option from the props table except `loading`, `children`, `data` and `placeholderData`.
+
+Or with CSS variables:
+
+```css
+:root {
+  --skx-base-color: #e5e7eb;
+  --skx-highlight-color: #f3f4f6;
+  --skx-duration: 1.2s;
+  --skx-border-radius: 6px;
+}
+```
+
+## Tables, lists and selects
+
+By default, children that are not a single HTML element are wrapped in a `<div style="display: contents">`. That is invisible to layout, but a `div` is not valid inside `<tbody>`, `<ul>` or `<select>`. There, use `showWrapper={false}`: no element is added, and the skeleton is applied to whatever your component renders.
+
+```tsx
+<tbody>
+  <Skeleton loading={loading} data={rows} count={5} showWrapper={false}>
+    {(row) => <OrderRow row={row} />}
+  </Skeleton>
+</tbody>
+```
+
+A single HTML element child (e.g. `<tr>…</tr>`) never gets a wrapper.
+
+## Next.js and SSR
+
+The bundle is marked `'use client'`, so it can be imported from Server Components. Skeleton markup renders on the server and hydrates without mismatches (`randomWidth` is deterministic).
+
+## Accessibility
+
+While loading, every skeleton root gets `aria-busy="true"` and `inert`: placeholder text is not announced, and nothing inside can be focused or clicked. Animations stop when the user prefers reduced motion.
+
+## Browser support
+
+All evergreen browsers. Automatic detection of text-only elements uses `:has()` (Chrome 105+, Safari 15.4+, Firefox 121+); older browsers fall back to a simpler tag-based rule.
+
+**Known limitations**
+- Loose text next to child elements in a generic container, e.g. `<div>Hello <span>you</span></div>`, is hidden rather than painted (only `span` gets a block). Wrap the text in its own element. Inline formatting tags are fine: `<div>Hello <b>you</b></div>` becomes one line.
+- `canvas`, `iframe`, `embed` and `object` cannot be recoloured and are hidden while loading.
+- A broken image with `alt` text may still show the browser's broken-image icon.
+- Content kept with `SkeletonKeep` is visible but not interactive while loading (the skeleton is `inert`).
+
+## Migrating from 1.0.x
+
+- `useAST` is deprecated and does nothing: nested components are handled automatically in every mode, including components with hooks.
+- `SkeletonKeep`, `SkeletonIgnore`, `SkeletonUnite`, `exceptTags` and `exceptTagGroups` now work without `useAST`.
+- CSS classes and variables use the `skx-` prefix. The old `--skeletonify-*` variables are still read as fallbacks.
+- When loaded, children are rendered without a wrapper; `className`/`style` only apply while loading.
+- `data` is the loaded data. For dummy data while loading, use `placeholderData`.
+- Import the stylesheet as `react-skeletonix/style.css` (the old `react-skeletonix/dist/style.css` path still works).
+
+## Development
+
+```bash
+npm install
+npm run check          # lint + typecheck + unit tests
+npm run test:browser   # stylesheet checks in headless Chrome
+npm run build
+```
+
+## License
+
+MIT © Amit Kumar
