@@ -273,7 +273,6 @@ All evergreen browsers. On the client, each element is classified once by a smal
 
 **Known limitations**
 - Text next to form fields or blocks (see above) is drawn as a static bar: it does not shimmer.
-- A broken image with `alt` text may still show the browser's broken-image icon.
 - Content kept with `SkeletonKeep` is visible but not interactive while loading (the skeleton is `inert`).
 - Shadow DOM content (web components) cannot be styled from outside.
 

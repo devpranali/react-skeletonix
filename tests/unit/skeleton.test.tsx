@@ -328,7 +328,7 @@ describe('complex UI', () => {
             </Skeleton>
         );
         const kind = (sel: string) => $(sel)!.getAttribute('data-skx');
-        expect(kind('img')).toBe('b');
+        expect(kind('img')).toBe('i'); // no src yet: empty image block
         expect(kind('h3')).toBe('f');
         expect(kind('.mixed')).toBe('t');
         expect(kind('.text')).toBe('t');

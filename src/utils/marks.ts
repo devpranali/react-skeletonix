@@ -43,6 +43,7 @@ export function validSelector(selector: string | undefined): string {
 /*   b  block (media, control, explicit shape)                         */
 /*   e  empty element (drawn only if it has a size)                    */
 /*   c  covered (canvas, iframe, checkbox...: inset outline)           */
+/*   i  image without pixels (no src / failed): block, no broken frame  */
 /* Containers get nothing and are descended into. The stylesheet then  */
 /* only needs cheap attribute rules; its own :has()-based detection is */
 /* a fallback for server-rendered HTML before hydration.               */
@@ -56,6 +57,9 @@ const BLOCK_TAGS = set('img', 'svg', 'textarea', 'select', 'button');
 const BLOCK_CLASSES = ['sk-block', 'sk-circle', 'sk-rect', 'sk-pill'];
 const COVERED_TAGS = set('progress', 'meter', 'canvas', 'iframe', 'embed', 'object', 'audio', 'video');
 const CONTROL_TAGS = set('input', 'select', 'textarea');
+// Explicit shapes and fields: an element containing one is not a text line.
+const SHAPES = '[data-skeleton], .sk-block, .sk-pill, .sk-circle, .sk-rect, .sk-line';
+const SHAPES_OR_FIELDS = `input, select, textarea, ${SHAPES}`;
 const COVERED_INPUTS = set('checkbox', 'radio', 'range', 'color', 'file');
 const FILLABLE = set('p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'label', 'li', 'td', 'th', 'dd', 'dt', 'figcaption', 'caption', 'blockquote');
 const NON_VISUAL = set(
@@ -88,9 +92,13 @@ function classifyRoot(root: Element, fill: boolean, result: Classification): voi
     const hasKeep = !!root.querySelector(KEEP_SELECTOR);
     const keepInside = (el: Element) => hasKeep && !!el.querySelector(KEEP_SELECTOR);
     const isInline = (el: Element) => INLINE_TAGS.has(el.localName) || getComputedStyle(el).display.startsWith('inline');
-    // A line of text may contain icons, links, buttons..., but not form fields
-    // or block-level elements (painting it would cover them).
-    const isLine = (children: HTMLCollection) => Array.from(children).every((c) => !CONTROL_TAGS.has(c.localName) && isInline(c));
+    // A line of text may contain icons, links, buttons..., but not form fields,
+    // explicit shapes or block-level elements (painting it would cover them),
+    // e.g. <label>Notifications <span class="sk-pill"><input/></span></label>.
+    const isLine = (children: HTMLCollection) =>
+        Array.from(children).every(
+            (c) => !CONTROL_TAGS.has(c.localName) && !c.matches(SHAPES) && !c.querySelector(SHAPES_OR_FIELDS) && isInline(c)
+        );
     // Empty elements: sized ones are placeholders, zero-sized ones are text
     // whose data is missing. Decided after the walk, so layout is read once.
     const empties: Element[] = [];
@@ -121,6 +129,14 @@ function classifyRoot(root: Element, fill: boolean, result: Classification): voi
         }
         if (COVERED_TAGS.has(tag)) {
             out.set(el, 'c');
+            return;
+        }
+        if (tag === 'img') {
+            const img = el as HTMLImageElement;
+            // No source yet, or failed to load: an empty block, without the
+            // browser's missing/broken-image frame.
+            const empty = !img.getAttribute('src') || (img.complete && img.naturalWidth === 0);
+            out.set(el, empty ? 'i' : 'b');
             return;
         }
 
@@ -267,9 +283,16 @@ export function decorateSubtrees(
         observer = new MutationObserver(run);
         roots.forEach((root) => observer!.observe(root, { childList: true, subtree: true, characterData: true }));
     }
+    // An image that fails to load after this pass must lose its broken frame.
+    // (error events do not bubble, so listen in the capture phase.)
+    const onError = (e: Event) => {
+        if ((e.target as Element | null)?.localName === 'img') run();
+    };
+    roots.forEach((root) => root.addEventListener('error', onError, true));
 
     return () => {
         observer?.disconnect();
+        roots.forEach((root) => root.removeEventListener('error', onError, true));
         setLooseText(owner, []);
         kinds.forEach((_, el) => el.removeAttribute(KIND_ATTR));
         kinds.clear();

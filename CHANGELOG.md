@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.1 (2026-09-30)
+
+### Fixed
+- Images with no `src` yet (`<img src={user?.avatar}>`) or that failed to load are drawn as clean blocks, without the browser's missing/broken-image frame or icon.
+- A label that contains a form field or an explicit shape (e.g. a switch marked `sk-pill`) is no longer drawn as one text block covering it.
+- The cover over video, canvas, iframes and native controls reaches past the element edge, so anti-aliased edge pixels never show what is underneath.
+
 ## 2.0.0 (2026-09-30)
 
 Every 1.x prop and export still exists, but some output changed. See [Upgrading from 1.x](README.md#upgrading-from-1x).

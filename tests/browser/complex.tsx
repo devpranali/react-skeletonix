@@ -66,6 +66,8 @@ function App() {
                 </div>
             </Skeleton>
             <Skeleton loading={loading}><table><tbody><tr><td id="padded-td" style={{ padding: 16 }}>Padded cell</td></tr></tbody></table></Skeleton>
+            <Skeleton loading={loading}><div><img id="nosrc" alt="" style={{ width: 40, height: 40, borderRadius: '50%' }} /><img id="broken" alt="broken" src="does-not-exist.png" style={{ width: 40, height: 40 }} /></div></Skeleton>
+            <Skeleton loading={loading}><div><label id="lbl-switch" style={{ display: 'flex', justifyContent: 'space-between' }}><span>Notifications</span><span id="sw" className="sk-pill" style={{ display: 'inline-block', width: 44, height: 24 }}><input type="checkbox" style={{ position: 'absolute', opacity: 0 }} /></span></label></div></Skeleton>
             <Skeleton loading={loading}><div className="user"><div id="empty-div"></div><span id="empty-span"></span><div id="sized-div" style={{ width: 30, height: 30 }} /></div></Skeleton>
             <Skeleton loading={loading}><div><button id="btn"><Icon id="btn-icon" /> 12</button></div></Skeleton>
             <Skeleton loading={loading}><div><div id="emoji">🎬 Movies</div></div></Skeleton>
@@ -137,6 +139,9 @@ setTimeout(() => {
     check('wide stretched text stays a text line', el('stretched').dataset.skx === 't');
     check('padded table cell stays a text line', el('padded-td').dataset.skx === 't');
     check('multi-line paragraph stays text lines', el('multi').dataset.skx === 't');
+    check('image without src: block without broken frame', el('nosrc').dataset.skx === 'i' && cs('nosrc').content.includes('url(') && painted('nosrc'));
+    check('image that failed to load: block without broken icon', el('broken').dataset.skx === 'i' && cs('broken').content.includes('url('), String(el('broken').dataset.skx));
+    check('label containing a switch shape is not one text block', el('lbl-switch').dataset.skx !== 't' && el('sw').dataset.skx === 'b');
     check('empty div (missing data) shows a line', el('empty-div').dataset.skx === 'f' && el('empty-div').getBoundingClientRect().height > 10);
     check('empty span (missing data) shows a line', el('empty-span').dataset.skx === 'f' && el('empty-span').getBoundingClientRect().width > 20);
     check('sized empty div stays a placeholder block', el('sized-div').dataset.skx === 'e' && painted('sized-div'));
