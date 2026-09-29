@@ -1,5 +1,4 @@
 import * as React from 'react';
-import useIntersection from './hooks/useIntersection';
 import { HtmlTagGroup } from './constants/tags';
 import { ANCHOR_ATTR, decorateAnchored } from './utils/anchors';
 import { markSubtrees, tagsSelector, validSelector } from './utils/marks';
@@ -17,32 +16,67 @@ import {
 import './Skeleton.css';
 
 export type SkeletonVariant = 'shimmer' | 'pulse' | 'wave' | 'blink' | 'none';
+export type SkeletonColorScheme = 'light' | 'dark' | 'auto';
 
-/**
- * Global Theme Configuration for all Skeletons
- */
-export interface SkeletonThemeProps {
-    baseColor?: string;
-    highlightColor?: string;
+/** Options shared by <Skeleton> and <SkeletonTheme>. */
+export interface SkeletonOptions {
+    /** Number of skeleton copies to render while loading. Default `1`. */
+    count?: number;
+    /** Animation length in seconds. Default `1.5`. */
     duration?: number;
-    borderRadius?: string | number;
+    /** Set `false` for static blocks. Default `true`. */
     animate?: boolean;
+    /** Animation style. Default `'shimmer'`. */
     variant?: SkeletonVariant;
+    /** Colour of the skeleton blocks. */
+    baseColor?: string;
+    /** Colour of the moving highlight (shimmer / wave). */
+    highlightColor?: string;
+    /** Corner radius of text blocks, e.g. `8` or `'0.5rem'`. Default `4px`. */
+    borderRadius?: string | number;
+    /** Default colours for light or dark UIs; `'auto'` follows the OS. Default `'light'`. */
+    colorScheme?: SkeletonColorScheme;
+    /** Render every block as a circle. */
+    circle?: boolean;
+    /** Render each wrapped element as one solid block. */
+    container?: boolean;
+    /** Vary the width of text lines, optionally within `[min, max]` percent. */
+    randomWidth?: boolean | [number, number];
+    /** Wrap non-element children in a `display: contents` div. Default `true`. */
+    showWrapper?: boolean;
+    /** Delay between copies in seconds (`true` = 0.1s). Default `true`. */
+    stagger?: boolean | number;
+    /** Only animate while the skeleton is in the viewport. */
+    lazy?: boolean;
+    /** Elements matching this selector are hidden (space is kept) while loading. */
+    excludeSelector?: string;
+    /** Tags shown as-is (not masked) while loading, e.g. `['button']`. */
+    exceptTags?: string[];
+    /** Tag groups shown as-is while loading, e.g. `['MEDIA_TAGS']`. */
+    exceptTagGroups?: HtmlTagGroup[];
     /** @deprecated No longer needed: every mode now handles nested components. */
     useAST?: boolean;
 }
 
+export type SkeletonThemeProps = SkeletonOptions;
+
 const SkeletonThemeContext = React.createContext<SkeletonThemeProps | undefined>(undefined);
 
-export const SkeletonTheme: React.FC<SkeletonThemeProps & { children: React.ReactNode }> = ({ children, ...themeProps }) => {
+/** Sets default options for every <Skeleton> below it. Themes can be nested. */
+export const SkeletonTheme: React.FC<SkeletonThemeProps & { children?: React.ReactNode }> = ({ children, ...themeProps }) => {
+    const parent = React.useContext(SkeletonThemeContext);
+    const merged = { ...parent, ...definedOnly(themeProps) };
+    const key = JSON.stringify(merged);
+    // Stable context value while the options are unchanged.
+    const value = React.useMemo(() => merged, [key]); // eslint-disable-line react-hooks/exhaustive-deps
     return (
-        <SkeletonThemeContext.Provider value={themeProps}>
+        <SkeletonThemeContext.Provider value={value}>
             {children}
         </SkeletonThemeContext.Provider>
     );
 };
 
-export interface SkeletonProps<T = any> extends Omit<React.HTMLAttributes<HTMLElement>, 'children'> {
+export interface SkeletonProps<T = any> extends SkeletonOptions, Omit<React.HTMLAttributes<HTMLElement>, 'children'> {
     /** Shows the skeleton while `true`; renders the real children when `false`. */
     loading: boolean;
     /** Content to mask, or a render function `(item, index) => node`. */
@@ -51,32 +85,28 @@ export interface SkeletonProps<T = any> extends Omit<React.HTMLAttributes<HTMLEl
     data?: T[] | T | null;
     /** Item passed to a render function while loading (defaults to `null`). */
     placeholderData?: T;
-    /** Number of skeleton copies to render while loading. */
-    count?: number;
-    duration?: number;
-    animate?: boolean;
-    variant?: SkeletonVariant;
-    baseColor?: string;
-    highlightColor?: string;
-    borderRadius?: string | number;
-    circle?: boolean;
-    /** Elements matching this selector are hidden (space is kept) while loading. */
-    excludeSelector?: string;
-    showWrapper?: boolean;
-    randomWidth?: boolean | [number, number];
-    container?: boolean;
-    /** @deprecated No longer needed: every mode now handles nested components. */
-    useAST?: boolean;
-    /** Tags shown as-is (not masked) while loading, e.g. `['button']`. */
-    exceptTags?: string[];
-    /** Tag groups shown as-is while loading, e.g. `['MEDIA_TAGS']`. */
-    exceptTagGroups?: HtmlTagGroup[];
-    lazy?: boolean;
-    stagger?: boolean | number;
 }
 
+function definedOnly<O extends object>(obj: O): Partial<O> {
+    const out: Partial<O> = {};
+    (Object.keys(obj) as Array<keyof O>).forEach((k) => {
+        if (obj[k] !== undefined) out[k] = obj[k];
+    });
+    return out;
+}
+
+const DEFAULTS = {
+    count: 1,
+    animate: true,
+    variant: 'shimmer' as SkeletonVariant,
+    colorScheme: 'light' as SkeletonColorScheme,
+    showWrapper: true,
+    stagger: true as boolean | number,
+    lazy: false,
+};
+
 // Deterministic "random" widths: stable across re-renders and SSR/CSR.
-function widthVars(randomWidth: SkeletonProps['randomWidth'], index: number): Record<string, string> {
+function widthVars(randomWidth: SkeletonOptions['randomWidth'], index: number): Record<string, string> {
     if (!randomWidth) return {};
     const [min, max] = Array.isArray(randomWidth) ? randomWidth : [60, 100];
     const pick = (n: number) => {
@@ -100,36 +130,37 @@ const SkeletonInternal = <T,>(
         children,
         data,
         placeholderData,
-        count = 1,
-        duration = theme?.duration,
-        animate = theme?.animate ?? true,
-        variant = theme?.variant ?? 'shimmer',
-        baseColor = theme?.baseColor,
-        highlightColor = theme?.highlightColor,
-        borderRadius = theme?.borderRadius,
+        count,
+        duration,
+        animate,
+        variant,
+        baseColor,
+        highlightColor,
+        borderRadius,
+        colorScheme,
         circle,
-        excludeSelector,
-        showWrapper = true,
-        randomWidth,
         container,
-        useAST,
+        randomWidth,
+        showWrapper,
+        stagger,
+        lazy,
+        excludeSelector,
         exceptTags,
         exceptTagGroups,
-        lazy = false,
-        stagger = true,
+        useAST,
         className,
         style,
         ...restProps
-    } = props;
+    } = { ...DEFAULTS, ...theme, ...definedOnly(props) } as SkeletonProps<T> & typeof DEFAULTS;
 
     const copies = loading ? Math.max(0, Math.floor(count)) : 0;
 
     // Root elements of every skeleton copy, by index.
     const roots = React.useRef(new Map<number, Element>());
     const anchors = React.useRef(new Map<number, Element>());
-    const firstRoot = React.useRef<HTMLElement | null>(null);
+    const anchorRoots = React.useRef(new Map<number, Element[]>());
 
-    const isVisible = useIntersection(firstRoot, { enabled: lazy, threshold: 0.1 });
+    const [isVisible, setVisible] = React.useState(!lazy);
     const shouldAnimate = animate && (!lazy || isVisible);
 
     const rootClass = cx(
@@ -138,7 +169,8 @@ const SkeletonInternal = <T,>(
         `skx-v-${variant}`,
         circle && 'skx-circle',
         container && 'skx-container',
-        randomWidth && 'skx-random'
+        randomWidth && 'skx-random',
+        colorScheme !== 'light' && `skx-scheme-${colorScheme}`
     );
 
     const baseVars = React.useMemo(() => {
@@ -180,7 +212,7 @@ const SkeletonInternal = <T,>(
     // root through the forwarded ref.
     useIsoLayoutEffect(() => {
         const cleanups: Array<() => void> = [];
-        const anchorRoots = new Map<number, Element[]>();
+        anchorRoots.current = new Map();
 
         anchors.current.forEach((start, i) => {
             const deco = decorations.current[i];
@@ -188,18 +220,17 @@ const SkeletonInternal = <T,>(
             cleanups.push(decorateAnchored(
                 start,
                 { classes: deco.classes, vars: deco.vars, attrs: { 'aria-busy': 'true', inert: '' } },
-                (els) => anchorRoots.set(i, els)
+                (els) => anchorRoots.current.set(i, els)
             ));
         });
 
-        const allRoots = [...roots.current.values(), ...Array.from(anchorRoots.values()).flat()];
+        const allRoots = [...roots.current.values(), ...Array.from(anchorRoots.current.values()).flat()];
         cleanups.push(markSubtrees(allRoots, [
             [validSelector(excludeSelector), 'ignore'],
             [validSelector(keepSelector), 'keep'],
         ]));
 
-        const first = (roots.current.get(0) ?? anchorRoots.get(0)?.[0] ?? null) as HTMLElement | null;
-        firstRoot.current = first;
+        const first = (roots.current.get(0) ?? anchorRoots.current.get(0)?.[0] ?? null) as HTMLElement | null;
         assignRef(ref, first);
 
         return () => {
@@ -207,6 +238,32 @@ const SkeletonInternal = <T,>(
             assignRef(ref, null);
         };
     });
+
+    // lazy: animate only while at least one copy is in the viewport. Wrapper
+    // roots are display:contents (no box), so their children are observed.
+    React.useEffect(() => {
+        if (!lazy || !loading) return;
+        if (typeof IntersectionObserver === 'undefined') {
+            setVisible(true);
+            return;
+        }
+        const targets: Element[] = [];
+        const add = (el: Element) => {
+            if (el.classList.contains('skx-wrapper') && el.children.length) targets.push(...Array.from(el.children));
+            else targets.push(el);
+        };
+        roots.current.forEach(add);
+        anchorRoots.current.forEach((els) => els.forEach(add));
+        if (!targets.length) return;
+
+        const inView = new Set<Element>();
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((e) => (e.isIntersecting ? inView.add(e.target) : inView.delete(e.target)));
+            setVisible(inView.size > 0);
+        }, { threshold: 0.1 });
+        targets.forEach((t) => observer.observe(t));
+        return () => observer.disconnect();
+    }, [lazy, loading, copies, showWrapper]);
 
     // ---- Loaded: render the real content, untouched ----
     if (!loading) {
